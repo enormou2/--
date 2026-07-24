@@ -30,8 +30,8 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * === 小车控制架构 ===
- * SysTick 100Hz → Control_Update() → 速度环 + 转向环 → 电机PWM
  * TIMG6  50Hz  → IMU_getYawPitchRoll() → 姿态更新
+ * SysTick 100Hz → Control_Update() → 速度环 + 转向环 → 电机PWM
  */
 
 #include "ti_msp_dl_config.h"
@@ -46,6 +46,7 @@
 
 /* ---- 全局 ---- */
 float ypr[3];
+volatile uint32_t g_imu_cnt = 0;  /* IMU ISR 计数器，用于调试 */
 
 void delay_ms(uint32_t ms)
 {
@@ -54,12 +55,23 @@ void delay_ms(uint32_t ms)
     }
 }
 
+/* ---- TIMER_0 (TIMG6) 中断处理：50Hz 驱动 IMU 姿态融合 ---- */
+void TIMER_0_INST_IRQHandler(void)
+{
+    switch (DL_TimerG_getPendingInterrupt(TIMER_0_INST)) {
+        case DL_TIMER_IIDX_ZERO:
+            g_imu_cnt++;
+            IMU_getYawPitchRoll(ypr);
+            break;
+        default:
+            break;
+    }
+}
+
 /* ---- SysTick 中断处理：100Hz 控制循环 ---- */
 void SysTick_Handler(void)
 {
     Control_Update();
-    /* IMU 姿态更新 (与主循环配合, 约 50-100Hz) */
-    IMU_getYawPitchRoll(ypr);
 }
 
 /* ---- UART 命令解析 ---- */
@@ -69,36 +81,31 @@ static void ParseCommand(const char *cmd)
 
     if (strncmp(cmd, "MODE TRACK", 10) == 0) {
         Control_SetMode(STEER_MODE_TRACK);
-        uart_printf("→ 切换为循迹模式\r\n");
+        uart_printf("-> TRACK mode\r\n");
     }
     else if (strncmp(cmd, "MODE ANGLE", 10) == 0) {
         Control_SetMode(STEER_MODE_ANGLE);
-        uart_printf("→ 切换为角度模式\r\n");
+        uart_printf("-> ANGLE mode\r\n");
     }
     else if (sscanf(cmd, "SPEED %f", &val) == 1) {
         Control_SetTargetSpeed(val);
-        uart_printf("→ 目标速度 = %.0f\r\n", val);
+        uart_printf("-> Target speed = %.0f\r\n", val);
     }
     else if (sscanf(cmd, "YAW %f", &val) == 1) {
         Control_SetTargetYaw(val);
-        uart_printf("→ 目标角度 = %.2f\r\n", val);
+        uart_printf("-> Target yaw = %.2f\r\n", val);
     }
     else if (strcmp(cmd, "STAT") == 0) {
         motor_speed_t spd;
         Motor_GetSpeed(&spd);
-        uart_printf("Mode=%s TargetSpd=%.0f Avg=%.1f Diff=%.1f "
-                    "Yaw=%.1f Track=%.1f\r\n",
-                    g_steer_mode == STEER_MODE_TRACK ? "TRACK" : "ANGLE",
+        uart_printf("M=%s Spd=%.0f Avg=%.1f Diff=%.1f "
+                    "Yaw=%.1f Trk=%.1f ImuCnt=%lu\r\n",
+                    g_steer_mode == STEER_MODE_TRACK ? "T" : "A",
                     g_target_speed, spd.avg, spd.diff,
-                    ypr[0], Track_Err(0));
+                    ypr[0], Track_Err(0), g_imu_cnt);
     }
     else {
-        uart_printf("Commands:\r\n");
-        uart_printf("  MODE TRACK  - 循迹环模式\r\n");
-        uart_printf("  MODE ANGLE  - 角度环模式\r\n");
-        uart_printf("  SPEED <n>   - 设置目标速度 (0-1000)\r\n");
-        uart_printf("  YAW <deg>   - 设置目标角度\r\n");
-        uart_printf("  STAT        - 显示状态\r\n");
+        uart_printf("CMD: MODE TRACK|ANGLE, SPEED N, YAW N, STAT\r\n");
     }
 }
 
@@ -106,36 +113,39 @@ int main(void)
 {
     SYSCFG_DL_init();
 
-    /* ---- 使能 UART 中断 ---- */
+    /* ---- 1. UART 中断使能 ---- */
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
+    uart_printf("\r\n=== CAR START ===\r\n");
 
-    /* ---- 初始化 ---- */
-    OLED_Init();
-    delay_ms(100);
-
-    Motor_Init();
-    Control_Init();
-
-    /* ---- IMU 初始化（必须在定时器中断使能之前完成，避免 I2C 冲突）---- */
+    /* ---- 2. IMU 最先初始化 (参照 ICM45686 工程) ---- */
     IMU_init();
     delay_ms(100);
 
-    /* ---- 配置 SysTick 100Hz (CPUCLK=32MHz, period=320000) ---- */
-    SysTick_Config(CPUCLK_FREQ / CTRL_LOOP_FREQ_HZ);
+    /* ---- 3. 使能 TIMG6 50Hz 中断 ---- */
+    NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);
+    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
+    uart_printf("TIMG6 50Hz IMU started\r\n");
 
-    /* ---- 启动 ---- */
+    /* ---- 4. OLED ---- */
+    OLED_Init();
+    delay_ms(50);
+
+    /* ---- 5. 电机 + 控制 ---- */
+    Motor_Init();
+    Control_Init();
+
+    /* ---- 6. SysTick 100Hz 控制循环 ---- */
+    SysTick_Config(CPUCLK_FREQ / CTRL_LOOP_FREQ_HZ);
+    uart_printf("SysTick 100Hz Ctrl started\r\n");
+
     OLED_Printf(30, 30, OLED_8X16, "d");
-    OLED_Printf(1, 1, OLED_8X16, "CAR Ready");
+    OLED_Printf(1, 1, OLED_8X16, "CAR OK");
     OLED_Update();
 
-    uart_printf("\r\n=== 小车控制架构 ===\r\n");
-    uart_printf("SysTick 100Hz 控制循环已启动\r\n");
-    uart_printf("默认: 循迹模式 | 基础速度=%d | PWM周期=%d\r\n",
-                CTRL_BASE_SPEED, CTRL_PWM_PERIOD);
-    uart_printf("命令: MODE/SPEED/YAW/STAT\r\n\r\n");
+    uart_printf("Ready. CMD: MODE/SPEED/YAW/STAT\r\n\r\n");
 
     while (1) {
-        /* 高频轮询右编码器软件解码（补充 SysTick 10ms 间隔） */
+        /* 高频轮询右编码器软件解码 */
         Motor_UpdateRightEncoder();
 
         /* UART 命令处理 */
@@ -146,19 +156,13 @@ int main(void)
             g_usart_rx_sta = 0;
         }
 
-        /* 周期性输出状态 */
+        /* 周期性输出 IMU + IMU中断计数 */
         {
             static uint32_t tick = 0;
-            if (++tick >= 200000) {
+            if (++tick >= 100000) {
                 tick = 0;
-                motor_speed_t spd;
-                Motor_GetSpeed(&spd);
-                uart_printf("[%.1f,%.1f,%.1f] Enc=(%ld,%ld) "
-                            "Avg=%.1f Diff=%.1f Mode=%s\r\n",
-                            ypr[0], ypr[1], ypr[2],
-                            (long)spd.left_delta, (long)spd.right_delta,
-                            spd.avg, spd.diff,
-                            g_steer_mode == STEER_MODE_TRACK ? "T" : "A");
+                uart_printf("%.2f,%.2f,%.2f\r\n",
+                            ypr[0], ypr[1], ypr[2]);
             }
         }
     }

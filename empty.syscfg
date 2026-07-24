@@ -32,6 +32,8 @@ const PWM1   = PWM.addInstance();
 const QEI    = scripting.addModule("/ti/driverlib/QEI", {}, false);
 const QEI1   = QEI.addInstance();
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
+const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
+const TIMER1 = TIMER.addInstance();
 const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1  = UART.addInstance();
 
@@ -183,6 +185,15 @@ QEI1.ccp1PinConfig.onlyInternalResistor = scripting.forceWrite(false);
 QEI1.ccp1PinConfig.passedPeripheralType = scripting.forceWrite("Digital");
 
 SYSCTL.forceDefaultClkConfig = true;
+
+TIMER1.$name              = "TIMER_0";
+TIMER1.timerMode          = "PERIODIC";
+TIMER1.timerClkDiv        = 8;
+TIMER1.timerClkPrescale   = 99;
+TIMER1.timerPeriod        = "20 ms";
+TIMER1.interrupts         = ["ZERO"];
+TIMER1.timerStartTimer    = true;
+TIMER1.peripheral.$assign = "TIMG6";
 
 UART1.$name                    = "UART_0";
 UART1.targetBaudRate           = 115200;

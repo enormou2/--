@@ -15,6 +15,12 @@
 /* PWM 周期（与 SysConfig 中 PWM Period Count 一致） */
 #define PWM_PERIOD  1000
 
+/* ---- 速度测量内部变量 ---- */
+static int32_t  enc_l_prev;      /* 上一次左编码器计数值 */
+static int32_t  enc_r_prev;      /* 上一次右编码器计数值 */
+static motor_speed_t g_speed;    /* 当前速度测量结果 */
+static uint8_t  speed_valid;     /* 首次采样标志 (0=无效) */
+
 /* ========================================================================
  * Motor_Init
  * ======================================================================== */
@@ -107,7 +113,7 @@ void Motor_SetRightSpeed(int16_t speed)
  * ======================================================================== */
 int32_t Motor_GetLeftEncoder(void)
 {
-    return (int32_t)(int16_t)DL_TimerG_getCount(ENC_L_INST);
+    return (int32_t)(int16_t)DL_TimerG_getTimerCount(ENC_L_INST);
 }
 
 /* ========================================================================
@@ -144,5 +150,54 @@ void Motor_UpdateRightEncoder(void)
     if (curr != enc_r_last) {
         enc_r_count += enc_table[enc_r_last][curr];
         enc_r_last = curr;
+    }
+}
+
+/* ========================================================================
+ * Motor_UpdateSpeed — 采样编码器并计算速度
+ * 应由控制定时器周期性调用 (e.g. 100Hz)
+ * ======================================================================== */
+void Motor_UpdateSpeed(void)
+{
+    int32_t enc_l_now, enc_r_now;
+    int32_t dl, dr;
+
+    /* 读当前编码器值 */
+    enc_l_now = Motor_GetLeftEncoder();
+    Motor_UpdateRightEncoder();  /* 刷新右编码器软件解码 */
+    enc_r_now = Motor_GetRightEncoder();
+
+    if (!speed_valid) {
+        /* 首次采样，仅记录基准值 */
+        enc_l_prev   = enc_l_now;
+        enc_r_prev   = enc_r_now;
+        speed_valid  = 1;
+        g_speed.left_delta  = 0;
+        g_speed.right_delta = 0;
+        g_speed.avg   = 0.0f;
+        g_speed.diff  = 0.0f;
+        return;
+    }
+
+    /* 计算差值（int32 自动处理 16 位硬件 QEI 翻转） */
+    dl = enc_l_now - enc_l_prev;
+    dr = enc_r_now - enc_r_prev;
+
+    enc_l_prev = enc_l_now;
+    enc_r_prev = enc_r_now;
+
+    g_speed.left_delta  = dl;
+    g_speed.right_delta = dr;
+    g_speed.avg   = (float)(dl + dr) * 0.5f;
+    g_speed.diff  = (float)(dl - dr) * 0.5f;
+}
+
+/* ========================================================================
+ * Motor_GetSpeed — 获取最近一次速度测量结果
+ * ======================================================================== */
+void Motor_GetSpeed(motor_speed_t *s)
+{
+    if (s != 0) {
+        *s = g_speed;
     }
 }

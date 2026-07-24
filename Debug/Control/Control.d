@@ -1,6 +1,6 @@
 # FIXED
 
-OLED.o: ../OLED.c \
+Control/Control.o: ../Control/Control.c \
  ti_msp_dl_config.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h \
@@ -88,7 +88,10 @@ OLED.o: ../OLED.c \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/dl_wwdt.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h \
- ../OLED_Font.h ../OLED.h
+ C:/Users/10959/workspace_ccstheia/test/Control/Control.h \
+ C:/Users/10959/workspace_ccstheia/test/PID/PID.h \
+ C:/Users/10959/workspace_ccstheia/test/Motor/Motor.h \
+ C:/Users/10959/workspace_ccstheia/test/Track/Track.h
 
 ti_msp_dl_config.h:
 
@@ -264,6 +267,10 @@ D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h:
 
 D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h:
 
-../OLED_Font.h:
+C:/Users/10959/workspace_ccstheia/test/Control/Control.h:
 
-../OLED.h:
+C:/Users/10959/workspace_ccstheia/test/PID/PID.h:
+
+C:/Users/10959/workspace_ccstheia/test/Motor/Motor.h:
+
+C:/Users/10959/workspace_ccstheia/test/Track/Track.h:

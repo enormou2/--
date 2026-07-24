@@ -2,11 +2,6 @@
    {
       "directory" : "C:/Users/10959/workspace_ccstheia/test/Debug",
       "command"   : "clang++ -D__MSPM0G3507__ -D__USE_SYSCONFIG__ -I\"C:/Users/10959/workspace_ccstheia/test\" -I\"C:/Users/10959/workspace_ccstheia/test/Debug\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/third_party/CMSIS/Core/Include\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/newlib-nano\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/arm-none-eabi\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/backward\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include-fixed\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -std=c99 -xc",
-      "file"      : "C:/Users/10959/workspace_ccstheia/test/Debug/ti_msp_dl_config.c"
-   },
-   {
-      "directory" : "C:/Users/10959/workspace_ccstheia/test/Debug",
-      "command"   : "clang++ -D__MSPM0G3507__ -D__USE_SYSCONFIG__ -I\"C:/Users/10959/workspace_ccstheia/test\" -I\"C:/Users/10959/workspace_ccstheia/test/Debug\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/third_party/CMSIS/Core/Include\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/newlib-nano\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/arm-none-eabi\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/backward\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include-fixed\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -std=c99 -xc",
       "file"      : "C:/Users/10959/workspace_ccstheia/test/ICM45686/icm45686.c"
    },
    {
@@ -63,5 +58,15 @@
       "directory" : "C:/Users/10959/workspace_ccstheia/test/Debug",
       "command"   : "clang++ -D__MSPM0G3507__ -D__USE_SYSCONFIG__ -I\"C:/Users/10959/workspace_ccstheia/test\" -I\"C:/Users/10959/workspace_ccstheia/test/Debug\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/third_party/CMSIS/Core/Include\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/newlib-nano\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/arm-none-eabi\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/backward\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include-fixed\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -std=c99 -xc",
       "file"      : "C:/Users/10959/workspace_ccstheia/test/empty.c"
+   },
+   {
+      "directory" : "C:/Users/10959/workspace_ccstheia/test/Debug",
+      "command"   : "clang++ -D__MSPM0G3507__ -D__USE_SYSCONFIG__ -I\"C:/Users/10959/workspace_ccstheia/test\" -I\"C:/Users/10959/workspace_ccstheia/test/Debug\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/third_party/CMSIS/Core/Include\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/newlib-nano\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/arm-none-eabi\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/backward\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include-fixed\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -std=c99 -xc",
+      "file"      : "C:/Users/10959/workspace_ccstheia/test/Debug/ti_msp_dl_config.c"
+   },
+   {
+      "directory" : "C:/Users/10959/workspace_ccstheia/test/Debug",
+      "command"   : "clang++ -D__MSPM0G3507__ -D__USE_SYSCONFIG__ -I\"C:/Users/10959/workspace_ccstheia/test\" -I\"C:/Users/10959/workspace_ccstheia/test/Debug\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/third_party/CMSIS/Core/Include\" -I\"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/newlib-nano\" -I\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/arm-none-eabi\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/c++/9.2.1/backward\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/lib/gcc/arm-none-eabi/9.2.1/include-fixed\" -isystem\"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include\" -std=c99 -xc",
+      "file"      : "C:/Users/10959/workspace_ccstheia/test/Control/Control.c"
    }
 ]

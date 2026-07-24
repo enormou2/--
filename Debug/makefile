@@ -13,6 +13,7 @@ ORDERED_OBJS += \
 "./empty.o" \
 "./ti_msp_dl_config.o" \
 "./startup_mspm0g350x_gcc.o" \
+"./Control/Control.o" \
 "./ICM45686/icm45686.o" \
 "./ICM45686/inv_imu_driver.o" \
 "./ICM45686/inv_imu_transport.o" \
@@ -39,6 +40,7 @@ RMDIR := RMDIR /S/Q
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include subdir_vars.mk
+-include Control/subdir_vars.mk
 -include ICM45686/subdir_vars.mk
 -include IIC/subdir_vars.mk
 -include IMU/subdir_vars.mk
@@ -48,6 +50,7 @@ RMDIR := RMDIR /S/Q
 -include Track/subdir_vars.mk
 -include UART/subdir_vars.mk
 -include subdir_rules.mk
+-include Control/subdir_rules.mk
 -include ICM45686/subdir_rules.mk
 -include IIC/subdir_rules.mk
 -include IMU/subdir_rules.mk
@@ -166,8 +169,8 @@ test.out: $(OBJS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(GEN_MISC_FILES__QUOTED)$(GEN_FILES__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_gcc.o" "ICM45686\icm45686.o" "ICM45686\inv_imu_driver.o" "ICM45686\inv_imu_transport.o" "IIC\I2C_communication.o" "IMU\IMU.o" "Motor\Motor.o" "OLED\OLED.o" "OLED\OLED_Font.o" "PID\PID.o" "Track\Track.o" "UART\uart_comm.o" 
-	-$(RM) "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_gcc.d" "ICM45686\icm45686.d" "ICM45686\inv_imu_driver.d" "ICM45686\inv_imu_transport.d" "IIC\I2C_communication.d" "IMU\IMU.d" "Motor\Motor.d" "OLED\OLED.d" "OLED\OLED_Font.d" "PID\PID.d" "Track\Track.d" "UART\uart_comm.d" 
+	-$(RM) "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_gcc.o" "Control\Control.o" "ICM45686\icm45686.o" "ICM45686\inv_imu_driver.o" "ICM45686\inv_imu_transport.o" "IIC\I2C_communication.o" "IMU\IMU.o" "Motor\Motor.o" "OLED\OLED.o" "OLED\OLED_Font.o" "PID\PID.o" "Track\Track.o" "UART\uart_comm.o" 
+	-$(RM) "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_gcc.d" "Control\Control.d" "ICM45686\icm45686.d" "ICM45686\inv_imu_driver.d" "ICM45686\inv_imu_transport.d" "IIC\I2C_communication.d" "IMU\IMU.d" "Motor\Motor.d" "OLED\OLED.d" "OLED\OLED_Font.d" "PID\PID.d" "Track\Track.d" "UART\uart_comm.d" 
 	-@echo ' '
 
 .PHONY: all clean dependents

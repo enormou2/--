@@ -41,6 +41,7 @@
 #include "ti_msp_dl_config.h"
 
 DL_TimerG_backupConfig gENC_LBackup;
+DL_TimerG_backupConfig gTIMER_0Backup;
 
 /*
  *  ======== SYSCFG_DL_init ========
@@ -54,12 +55,14 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     SYSCFG_DL_SYSCTL_init();
     SYSCFG_DL_PWM_MOTOR_init();
     SYSCFG_DL_ENC_L_init();
+    SYSCFG_DL_TIMER_0_init();
     SYSCFG_DL_I2C_0_init();
     SYSCFG_DL_I2C_OLED_init();
     SYSCFG_DL_UART_0_init();
     /* Ensure backup structures have no valid state */
 
 	gENC_LBackup.backupRdy 	= false;
+	gTIMER_0Backup.backupRdy 	= false;
 
 
 }
@@ -72,6 +75,7 @@ SYSCONFIG_WEAK bool SYSCFG_DL_saveConfiguration(void)
     bool retStatus = true;
 
 	retStatus &= DL_TimerG_saveConfiguration(ENC_L_INST, &gENC_LBackup);
+	retStatus &= DL_TimerG_saveConfiguration(TIMER_0_INST, &gTIMER_0Backup);
 
     return retStatus;
 }
@@ -82,6 +86,7 @@ SYSCONFIG_WEAK bool SYSCFG_DL_restoreConfiguration(void)
     bool retStatus = true;
 
 	retStatus &= DL_TimerG_restoreConfiguration(ENC_L_INST, &gENC_LBackup, false);
+	retStatus &= DL_TimerG_restoreConfiguration(TIMER_0_INST, &gTIMER_0Backup, false);
 
     return retStatus;
 }
@@ -92,6 +97,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_GPIO_reset(GPIOB);
     DL_TimerG_reset(PWM_MOTOR_INST);
     DL_TimerG_reset(ENC_L_INST);
+    DL_TimerG_reset(TIMER_0_INST);
     DL_I2C_reset(I2C_0_INST);
     DL_I2C_reset(I2C_OLED_INST);
     DL_UART_Main_reset(UART_0_INST);
@@ -100,6 +106,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_GPIO_enablePower(GPIOB);
     DL_TimerG_enablePower(PWM_MOTOR_INST);
     DL_TimerG_enablePower(ENC_L_INST);
+    DL_TimerG_enablePower(TIMER_0_INST);
     DL_I2C_enablePower(I2C_0_INST);
     DL_I2C_enablePower(I2C_OLED_INST);
     DL_UART_Main_enablePower(UART_0_INST);
@@ -290,6 +297,45 @@ SYSCONFIG_WEAK void SYSCFG_DL_ENC_L_init(void) {
         DL_TIMER_CC_INPUT_INV_NOINVERT, DL_TIMER_CC_1_INDEX);
     DL_TimerG_setLoadValue(ENC_L_INST, 65535);
     DL_TimerG_enableClock(ENC_L_INST);
+}
+
+
+
+/*
+ * Timer clock configuration to be sourced by BUSCLK /  (4000000 Hz)
+ * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
+ *   40404.0404040404 Hz = 4000000 Hz / (8 * (98 + 1))
+ */
+static const DL_TimerG_ClockConfig gTIMER_0ClockConfig = {
+    .clockSel    = DL_TIMER_CLOCK_BUSCLK,
+    .divideRatio = DL_TIMER_CLOCK_DIVIDE_8,
+    .prescale    = 98U,
+};
+
+/*
+ * Timer load value (where the counter starts from) is calculated as (timerPeriod * timerClockFreq) - 1
+ * TIMER_0_INST_LOAD_VALUE = (20 ms * 40404.0404040404 Hz) - 1
+ */
+static const DL_TimerG_TimerConfig gTIMER_0TimerConfig = {
+    .period     = TIMER_0_INST_LOAD_VALUE,
+    .timerMode  = DL_TIMER_TIMER_MODE_PERIODIC,
+    .startTimer = DL_TIMER_START,
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_TIMER_0_init(void) {
+
+    DL_TimerG_setClockConfig(TIMER_0_INST,
+        (DL_TimerG_ClockConfig *) &gTIMER_0ClockConfig);
+
+    DL_TimerG_initTimerMode(TIMER_0_INST,
+        (DL_TimerG_TimerConfig *) &gTIMER_0TimerConfig);
+    DL_TimerG_enableInterrupt(TIMER_0_INST , DL_TIMERG_INTERRUPT_ZERO_EVENT);
+    DL_TimerG_enableClock(TIMER_0_INST);
+
+
+
+
+
 }
 
 

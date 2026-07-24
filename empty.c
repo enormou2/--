@@ -109,6 +109,32 @@ static void ParseCommand(const char *cmd)
     }
 }
 
+/* ---- OLED 状态显示 ---- */
+static void Display_Update(void)
+{
+    motor_speed_t spd;
+    Motor_GetSpeed(&spd);
+
+    OLED_Clear();
+
+    /* 第1行: 模式 */
+    OLED_Printf(0, 0, OLED_8X16,
+                g_steer_mode == STEER_MODE_TRACK ? "MODE: TRACK" : "MODE: ANGLE");
+
+    /* 第2行: 航向角 + 目标速度 */
+    OLED_Printf(0, 16, OLED_8X16, "Yaw:%6.1f", ypr[0]);
+
+    /* 第3行: 编码器速度 */
+    OLED_Printf(0, 32, OLED_8X16, "Spd:%5.0f L:%4ld R:%4ld",
+                g_target_speed,
+                (long)spd.left_delta, (long)spd.right_delta);
+
+    /* 第4行: 循迹偏移 */
+    OLED_Printf(0, 48, OLED_8X16, "Trk:%5.1f", Track_Err(0));
+
+    OLED_Update();
+}
+
 int main(void)
 {
     SYSCFG_DL_init();
@@ -138,8 +164,8 @@ int main(void)
     SysTick_Config(CPUCLK_FREQ / CTRL_LOOP_FREQ_HZ);
     uart_printf("SysTick 100Hz Ctrl started\r\n");
 
-    OLED_Printf(30, 30, OLED_8X16, "d");
-    OLED_Printf(1, 1, OLED_8X16, "CAR OK");
+    OLED_Printf(0, 0, OLED_8X16, "CAR CONTROL");
+    OLED_Printf(0, 16, OLED_8X16, "IMU OK");
     OLED_Update();
 
     uart_printf("Ready. CMD: MODE/SPEED/YAW/STAT\r\n\r\n");
@@ -156,11 +182,12 @@ int main(void)
             g_usart_rx_sta = 0;
         }
 
-        /* 周期性输出 IMU + IMU中断计数 */
+        /* OLED 刷新 ~5Hz + 串口输出 */
         {
             static uint32_t tick = 0;
             if (++tick >= 100000) {
                 tick = 0;
+                Display_Update();
                 uart_printf("%.2f,%.2f,%.2f\r\n",
                             ypr[0], ypr[1], ypr[2]);
             }

@@ -89,7 +89,8 @@ empty.o: ../empty.c \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h \
  ../UART/uart_comm.h ../IMU/IMU.h ../OLED/OLED.h ../OLED/OLED_Font.h \
- ../Motor/Motor.h ../Track/Track.h ../Control/Control.h
+ ../Motor/Motor.h ../Track/Track.h ../Control/Control.h \
+ ../Button/Button.h
 
 ti_msp_dl_config.h:
 
@@ -278,3 +279,5 @@ D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h:
 ../Track/Track.h:
 
 ../Control/Control.h:
+
+../Button/Button.h:

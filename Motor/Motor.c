@@ -37,8 +37,7 @@ void Motor_Init(void)
     /* 启动 PWM 定时器 */
     DL_TimerG_startCounter(PWM_MOTOR_INST);
 
-    /* 启动左编码器 QEI */
-    DL_TimerG_startCounter(ENC_L_INST);
+    /* 左编码器 PA6/PA7 (SysConfig 已配置为上拉输入，软件解码) */
 }
 
 /* ========================================================================
@@ -59,17 +58,17 @@ void Motor_SetLeftSpeed(int16_t speed)
         /* Stop */
         DL_GPIO_clearPins(AIN1_PORT, AIN1_PIN_AIN1_PIN);
         DL_GPIO_clearPins(AIN2_PORT, AIN2_PIN_AIN2_PIN);
-        DL_TimerG_setCaptureCompareValue(PWM_MOTOR_INST, 0, DL_TIMER_CC_0_INDEX);
+        DL_TimerG_setCaptureCompareValue(PWM_MOTOR_INST, PWM_PERIOD, DL_TIMER_CC_0_INDEX);
         return;
     }
 
     /* 方向 */
     if (forward) {
-        DL_GPIO_setPins(AIN1_PORT, AIN1_PIN_AIN1_PIN);
-        DL_GPIO_clearPins(AIN2_PORT, AIN2_PIN_AIN2_PIN);
-    } else {
         DL_GPIO_clearPins(AIN1_PORT, AIN1_PIN_AIN1_PIN);
         DL_GPIO_setPins(AIN2_PORT, AIN2_PIN_AIN2_PIN);
+    } else {
+        DL_GPIO_setPins(AIN1_PORT, AIN1_PIN_AIN1_PIN);
+        DL_GPIO_clearPins(AIN2_PORT, AIN2_PIN_AIN2_PIN);
     }
 
     /* 占空比 */
@@ -93,41 +92,28 @@ void Motor_SetRightSpeed(int16_t speed)
     } else {
         DL_GPIO_clearPins(BIN1_PORT, BIN1_PIN_BIN1_PIN);
         DL_GPIO_clearPins(BIN2_PORT, BIN2_PIN_BIN2_PIN);
-        DL_TimerG_setCaptureCompareValue(PWM_MOTOR_INST, 0, DL_TIMER_CC_1_INDEX);
+        DL_TimerG_setCaptureCompareValue(PWM_MOTOR_INST, PWM_PERIOD, DL_TIMER_CC_1_INDEX);
         return;
     }
 
     if (forward) {
-        DL_GPIO_setPins(BIN1_PORT, BIN1_PIN_BIN1_PIN);
-        DL_GPIO_clearPins(BIN2_PORT, BIN2_PIN_BIN2_PIN);
-    } else {
         DL_GPIO_clearPins(BIN1_PORT, BIN1_PIN_BIN1_PIN);
         DL_GPIO_setPins(BIN2_PORT, BIN2_PIN_BIN2_PIN);
+    } else {
+        DL_GPIO_setPins(BIN1_PORT, BIN1_PIN_BIN1_PIN);
+        DL_GPIO_clearPins(BIN2_PORT, BIN2_PIN_BIN2_PIN);
     }
 
     DL_TimerG_setCaptureCompareValue(PWM_MOTOR_INST, duty, DL_TIMER_CC_1_INDEX);
 }
 
 /* ========================================================================
- * 左编码器 — 硬件 QEI
- * ======================================================================== */
-int32_t Motor_GetLeftEncoder(void)
-{
-    return (int32_t)(int16_t)DL_TimerG_getTimerCount(ENC_L_INST);
-}
-
-/* ========================================================================
- * 右编码器 — 软件解码
- * ======================================================================== */
-
-static int32_t  enc_r_count = 0;
-static uint8_t  enc_r_last;   /* 上一次 AB 状态 (bit1=A, bit0=B) */
-
-/*
+ * 编码器 — 双路软件解码
  * 正交解码状态机:
  *   AB: 00 → 01 → 11 → 10 → 00  (正向 +1)
  *   AB: 00 → 10 → 11 → 01 → 00  (反向 -1)
- */
+ * ======================================================================== */
+
 static const int8_t enc_table[4][4] = {
     /* old\new:  00   01   10   11  */
     /*  00  */ {  0,  +1,  -1,   0 },
@@ -135,6 +121,33 @@ static const int8_t enc_table[4][4] = {
     /*  10  */ { +1,   0,   0,  -1 },
     /*  11  */ {  0,  -1,  +1,   0 },
 };
+
+/* ---- 左编码器 (原硬件 QEI 可能被 5V 损坏，改用软件解码) ---- */
+
+static int32_t  enc_l_count = 0;
+static uint8_t  enc_l_last;
+
+int32_t Motor_GetLeftEncoder(void)
+{
+    return enc_l_count;
+}
+
+void Motor_UpdateLeftEncoder(void)
+{
+    uint32_t a = DL_GPIO_readPins(GPIO_GRP_1_PORT, GPIO_GRP_1_ENC_L_A_PIN) ? 1 : 0;
+    uint32_t b = DL_GPIO_readPins(GPIO_GRP_2_PORT, GPIO_GRP_2_ENC_L_B_PIN) ? 1 : 0;
+    uint8_t  curr = (uint8_t)((a << 1) | b);
+
+    if (curr != enc_l_last) {
+        enc_l_count += enc_table[enc_l_last][curr];
+        enc_l_last = curr;
+    }
+}
+
+/* ---- 右编码器 (软件解码) ---- */
+
+static int32_t  enc_r_count = 0;
+static uint8_t  enc_r_last;
 
 int32_t Motor_GetRightEncoder(void)
 {
@@ -162,9 +175,10 @@ void Motor_UpdateSpeed(void)
     int32_t enc_l_now, enc_r_now;
     int32_t dl, dr;
 
-    /* 读当前编码器值 */
+    /* 刷新两个编码器软件解码 */
+    Motor_UpdateLeftEncoder();
+    Motor_UpdateRightEncoder();
     enc_l_now = Motor_GetLeftEncoder();
-    Motor_UpdateRightEncoder();  /* 刷新右编码器软件解码 */
     enc_r_now = Motor_GetRightEncoder();
 
     if (!speed_valid) {

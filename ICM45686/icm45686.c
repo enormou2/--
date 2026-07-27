@@ -18,7 +18,7 @@
  * Hardware configuration
  * ======================================================================== */
 
-#define ICM_I2C_ADDR    0x69    /* 7-bit I2C address of ICM45686 */
+#define ICM_I2C_ADDR    0x68    /* 7-bit I2C address of ICM45686 */
 
 /* ========================================================================
  * Global driver device structure

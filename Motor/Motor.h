@@ -33,11 +33,14 @@ void Motor_SetLeftSpeed(int16_t speed);
 /** @brief 右电机速度  -1000..1000 (正=前进, 负=后退, 0=停止) */
 void Motor_SetRightSpeed(int16_t speed);
 
-/** @brief 左编码器 (硬件 QEI 计数值) */
+/** @brief 左编码器 (软件解码计数值) */
 int32_t Motor_GetLeftEncoder(void);
 
 /** @brief 右编码器 (软件解码计数值) */
 int32_t Motor_GetRightEncoder(void);
+
+/** @brief 左编码器软件解码 — 主循环或定时中断中周期性调用 (≥1kHz) */
+void Motor_UpdateLeftEncoder(void);
 
 /** @brief 右编码器软件解码 — 主循环或定时中断中周期性调用 (≥1kHz) */
 void Motor_UpdateRightEncoder(void);

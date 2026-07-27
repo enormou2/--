@@ -19,15 +19,16 @@
 
 /* ---- 控制模式 ---- */
 typedef enum {
-    STEER_MODE_TRACK = 0,  /* 循迹环: Track_Err() → 转向 PID → DiffPWM */
-    STEER_MODE_ANGLE = 1,  /* 角度环: yaw_error   → 转向 PID → DiffPWM */
+    STEER_MODE_IDLE  = 0,  /* 空闲: 电机停止, 方便调试 */
+    STEER_MODE_TRACK = 1,  /* 循迹环: Track_Err() → 转向 PID → DiffPWM */
+    STEER_MODE_ANGLE = 2,  /* 角度环: yaw_error   → 转向 PID → DiffPWM */
 } steer_mode_t;
 
 /* ---- 可配置参数 ---- */
 #define CTRL_PWM_PERIOD      1000      /* PWM 周期 (与 SysConfig 一致) */
 #define CTRL_LOOP_FREQ_HZ    100       /* 控制循环频率 Hz */
-#define CTRL_BASE_SPEED      400       /* 基础速度 (循迹模式最大速度) */
-#define CTRL_MIN_SPEED       100       /* 循迹模式最小速度 */
+#define CTRL_BASE_SPEED      300       /* 基础速度 (循迹模式最大速度) */
+#define CTRL_MIN_SPEED       200       /* 循迹模式最小速度 */
 #define CTRL_MAX_OFFSET_MM   35.0f     /* 循迹传感器最大偏移 mm */
 #define CTRL_TARGET_YAW      0.0f      /* 角度模式默认目标角度 */
 
@@ -35,6 +36,11 @@ typedef enum {
 extern steer_mode_t g_steer_mode;
 extern float        g_target_speed;    /* 角度模式下固定目标速度 */
 extern float        g_target_yaw;      /* 角度模式下目标角度 */
+
+/* ---- PID 参数 (UART 可实时修改) ---- */
+extern float g_speed_kp, g_speed_ki, g_speed_kd;
+extern float g_track_kp, g_track_ki, g_track_kd;
+extern float g_angle_kp, g_angle_ki, g_angle_kd;
 
 /* ---- API ---- */
 

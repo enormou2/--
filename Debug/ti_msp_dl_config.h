@@ -81,7 +81,7 @@ extern "C" {
 #define PWM_MOTOR_INST                                                     TIMG0
 #define PWM_MOTOR_INST_IRQHandler                               TIMG0_IRQHandler
 #define PWM_MOTOR_INST_INT_IRQN                                 (TIMG0_INT_IRQn)
-#define PWM_MOTOR_INST_CLK_FREQ                                         32000000
+#define PWM_MOTOR_INST_CLK_FREQ                                           256000
 /* GPIO defines for channel 0 */
 #define GPIO_PWM_MOTOR_C0_PORT                                             GPIOA
 #define GPIO_PWM_MOTOR_C0_PIN                                     DL_GPIO_PIN_12
@@ -95,23 +95,6 @@ extern "C" {
 #define GPIO_PWM_MOTOR_C1_IOMUX_FUNC                 IOMUX_PINCM35_PF_TIMG0_CCP1
 #define GPIO_PWM_MOTOR_C1_IDX                                DL_TIMER_CC_1_INDEX
 
-
-
-
-/* Defines for ENC_L */
-#define ENC_L_INST                                                         TIMG8
-#define ENC_L_INST_IRQHandler                                   TIMG8_IRQHandler
-#define ENC_L_INST_INT_IRQN                                     (TIMG8_INT_IRQn)
-/* Pin configuration defines for ENC_L PHA Pin */
-#define GPIO_ENC_L_PHA_PORT                                                GPIOA
-#define GPIO_ENC_L_PHA_PIN                                         DL_GPIO_PIN_7
-#define GPIO_ENC_L_PHA_IOMUX                                     (IOMUX_PINCM14)
-#define GPIO_ENC_L_PHA_IOMUX_FUNC                    IOMUX_PINCM14_PF_TIMG8_CCP0
-/* Pin configuration defines for ENC_L PHB Pin */
-#define GPIO_ENC_L_PHB_PORT                                                GPIOA
-#define GPIO_ENC_L_PHB_PIN                                         DL_GPIO_PIN_6
-#define GPIO_ENC_L_PHB_IOMUX                                     (IOMUX_PINCM11)
-#define GPIO_ENC_L_PHB_IOMUX_FUNC                    IOMUX_PINCM11_PF_TIMG8_CCP1
 
 
 /* Defines for TIMER_0 */
@@ -257,6 +240,24 @@ extern "C" {
 /* Defines for PIN_ENC_R_B: GPIOA.17 with pinCMx 39 on package pin 10 */
 #define ENC_R_B_PIN_ENC_R_B_PIN                                 (DL_GPIO_PIN_17)
 #define ENC_R_B_PIN_ENC_R_B_IOMUX                                (IOMUX_PINCM39)
+/* Port definition for Pin Group GPIO_GRP_0 */
+#define GPIO_GRP_0_PORT                                                  (GPIOB)
+
+/* Defines for BTN: GPIOB.21 with pinCMx 49 on package pin 20 */
+#define GPIO_GRP_0_BTN_PIN                                      (DL_GPIO_PIN_21)
+#define GPIO_GRP_0_BTN_IOMUX                                     (IOMUX_PINCM49)
+/* Port definition for Pin Group GPIO_GRP_1 */
+#define GPIO_GRP_1_PORT                                                  (GPIOB)
+
+/* Defines for ENC_L_A: GPIOB.22 with pinCMx 50 on package pin 21 */
+#define GPIO_GRP_1_ENC_L_A_PIN                                  (DL_GPIO_PIN_22)
+#define GPIO_GRP_1_ENC_L_A_IOMUX                                 (IOMUX_PINCM50)
+/* Port definition for Pin Group GPIO_GRP_2 */
+#define GPIO_GRP_2_PORT                                                  (GPIOB)
+
+/* Defines for ENC_L_B: GPIOB.23 with pinCMx 51 on package pin 22 */
+#define GPIO_GRP_2_ENC_L_B_PIN                                  (DL_GPIO_PIN_23)
+#define GPIO_GRP_2_ENC_L_B_IOMUX                                 (IOMUX_PINCM51)
 
 
 /* clang-format on */
@@ -266,7 +267,6 @@ void SYSCFG_DL_initPower(void);
 void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_PWM_MOTOR_init(void);
-void SYSCFG_DL_ENC_L_init(void);
 void SYSCFG_DL_TIMER_0_init(void);
 void SYSCFG_DL_I2C_0_init(void);
 void SYSCFG_DL_I2C_OLED_init(void);

@@ -22,14 +22,14 @@ void Read_Track_DATA(uint8_t *arr)
     uint8_t        current_track;
 
     /* 读取每个传感器（0=低/黑线, 1=高/白底） */
-    strackarr[0] = DL_GPIO_readPins(TRACK1_PORT, TRACK1_PIN_TRACK1_PIN) ? 1 : 0;
-    strackarr[1] = DL_GPIO_readPins(TRACK2_PORT, TRACK2_PIN_TRACK2_PIN) ? 1 : 0;
-    strackarr[2] = DL_GPIO_readPins(TRACK3_PORT, TRACK3_PIN_TRACK3_PIN) ? 1 : 0;
-    strackarr[3] = DL_GPIO_readPins(TRACK4_PORT, TRACK4_PIN_TRACK4_PIN) ? 1 : 0;
-    strackarr[4] = DL_GPIO_readPins(TRACK5_PORT, TRACK5_PIN_TRACK5_PIN) ? 1 : 0;
-    strackarr[5] = DL_GPIO_readPins(TRACK6_PORT, TRACK6_PIN_TRACK6_PIN) ? 1 : 0;
-    strackarr[6] = DL_GPIO_readPins(TRACK7_PORT, TRACK7_PIN_TRACK7_PIN) ? 1 : 0;
-    strackarr[7] = DL_GPIO_readPins(TRACK8_PORT, TRACK8_PIN_TRACK8_PIN) ? 1 : 0;
+    strackarr[0] = DL_GPIO_readPins(TRACK1_PORT, TRACK1_PIN_TRACK1_PIN) ? 0 : 1;
+    strackarr[1] = DL_GPIO_readPins(TRACK2_PORT, TRACK2_PIN_TRACK2_PIN) ? 0 : 1;
+    strackarr[2] = DL_GPIO_readPins(TRACK3_PORT, TRACK3_PIN_TRACK3_PIN) ? 0 : 1;
+    strackarr[3] = DL_GPIO_readPins(TRACK4_PORT, TRACK4_PIN_TRACK4_PIN) ? 0 : 1;
+    strackarr[4] = DL_GPIO_readPins(TRACK5_PORT, TRACK5_PIN_TRACK5_PIN) ? 0 : 1;
+    strackarr[5] = DL_GPIO_readPins(TRACK6_PORT, TRACK6_PIN_TRACK6_PIN) ? 0 : 1;
+    strackarr[6] = DL_GPIO_readPins(TRACK7_PORT, TRACK7_PIN_TRACK7_PIN) ? 0 : 1;
+    strackarr[7] = DL_GPIO_readPins(TRACK8_PORT, TRACK8_PIN_TRACK8_PIN) ? 0 : 1;
 
     /* 8 位数据合并为字节: bit7=Track1 ... bit0=Track8 */
     current_track = (uint8_t)(strackarr[7]       | (strackarr[6] << 1) |

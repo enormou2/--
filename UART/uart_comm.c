@@ -49,22 +49,19 @@ void UART_0_INST_IRQHandler(void)
     case DL_UART_MAIN_IIDX_RX:
         g_rx_byte = DL_UART_Main_receiveData(UART_0_INST);
 
-        if ((g_usart_rx_sta & 0x8000) == 0) {            /* 接收未完成 */
-            if (g_usart_rx_sta & 0x4000) {                 /* 已收到 \r */
-                if (g_rx_byte != 0x0a) {
-                    g_usart_rx_sta = 0;                    /* 格式错误，重新开始 */
-                } else {
-                    g_usart_rx_sta |= 0x8000;              /* 接收完成 */
+        if ((g_usart_rx_sta & 0x8000) == 0) {
+            if (g_rx_byte == 0x0d) {          /* \r: 标记 */
+                g_usart_rx_sta |= 0x4000;
+            } else if (g_rx_byte == 0x0a) {   /* \n: 完成 (兼容 \n 和 \r\n) */
+                g_usart_rx_sta |= 0x8000;
+            } else {
+                if (g_usart_rx_sta & 0x4000) {
+                    g_usart_rx_sta = 0;       /* \r 后不是 \n, 丢弃 */
                 }
-            } else {                                       /* 还没收到 \r */
-                if (g_rx_byte == 0x0d) {
-                    g_usart_rx_sta |= 0x4000;
-                } else {
-                    g_usart_rx_buf[g_usart_rx_sta & 0x3FFF] = g_rx_byte;
-                    g_usart_rx_sta++;
-                    if (g_usart_rx_sta > (USART_REC_LEN - 1)) {
-                        g_usart_rx_sta = 0;                /* 溢出，重新开始 */
-                    }
+                g_usart_rx_buf[g_usart_rx_sta & 0x3FFF] = g_rx_byte;
+                g_usart_rx_sta++;
+                if ((g_usart_rx_sta & 0x3FFF) > (USART_REC_LEN - 1)) {
+                    g_usart_rx_sta = 0;
                 }
             }
         }

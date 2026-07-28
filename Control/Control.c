@@ -19,13 +19,13 @@
 
 /* ---- 全局变量 ---- */
 steer_mode_t g_steer_mode   = STEER_MODE_IDLE;
-float        g_target_speed = 100.0f;
+float        g_target_speed = 0.0f;
 float        g_target_yaw   = CTRL_TARGET_YAW;
 
 /* ---- PID 参数 (UART 可调) ---- */
 float g_speed_kp = 1.0f,  g_speed_ki = 0.0f,  g_speed_kd = 0.0f;
-float g_track_kp = 0.0f, g_track_ki = 0.0f, g_track_kd = 0.0f;
-float g_angle_kp = 0.0f, g_angle_ki = 0.0f,g_angle_kd = 0.0f;
+float g_track_kp = 15.0f, g_track_ki = 0.0f, g_track_kd = 0.0f;
+float g_angle_kp = 10.0f, g_angle_ki = 0.0f,g_angle_kd = 0.0f;
 
 /* ---- PID 对象 ---- */
 static PID_t speed_pid;   /* 速度环 → AvgPWM */

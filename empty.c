@@ -94,10 +94,12 @@ static void ParseCommand(const char *cmd)
         else if (strcmp(pid, "angle") == 0 && strcmp(param, "kp") == 0) g_angle_kp = val;
         else if (strcmp(pid, "angle") == 0 && strcmp(param, "ki") == 0) g_angle_ki = val;
         else if (strcmp(pid, "angle") == 0 && strcmp(param, "kd") == 0) g_angle_kd = val;
-        else { uart_printf("? %s\r\n", cmd); return; }
-        uart_printf("%s.%s=%.3f\r\n", pid, param, val);
-    } else {
-        uart_printf("?? [%s]\r\n", cmd);
+        else if (strcmp(pid, "angle") == 0 && strcmp(param, "num") == 0) {
+            Control_SetTargetYaw(val);
+        }
+        else if (strcmp(pid, "angle") == 0 && strcmp(param, "avs") == 0) {
+            Control_SetTargetSpeed(val);
+        }
     }
 }
 
@@ -118,11 +120,11 @@ static void Display_Update(void)
     OLED_Clear();
 
     /* Y=0:  模式 + Yaw/Pitch/Roll */
-    OLED_Printf(0, 0, OLED_6X8, "%5s Y:%5.1f P:%5.1f R:%5.1f",
+    OLED_Printf(0, 0, OLED_6X8, "%-5s Y:%-5.1f P:%-5.1f R:%-5.1f",
                 mode_str, ypr[0], ypr[1], ypr[2]);
 
     /* Y=8:  循迹err + 左右编码器速度 */
-    OLED_Printf(0, 8, OLED_6X8, "Trk:%5.1f L:%5ld R:%5ld",
+    OLED_Printf(0, 8, OLED_6X8, "Trk:%-5.1f L:%-2ld R:%-2ld",
                 trk_err, (long)spd.left_delta, (long)spd.right_delta);
 
     /* Y=16: 平均速度 + 差分速度 */
@@ -130,15 +132,15 @@ static void Display_Update(void)
                 spd.avg, spd.diff);
 
     /* Y=24: Speed PID */
-    OLED_Printf(0, 24, OLED_6X8, "Sp Kp:%-5.2f Ki:%-5.2f Kd:%-5.2f",
+    OLED_Printf(0, 24, OLED_6X8, "Sp Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
                 g_speed_kp, g_speed_ki, g_speed_kd);
 
     /* Y=32: Track PID */
-    OLED_Printf(0, 32, OLED_6X8, "Tr Kp:%-5.2f Ki:%-5.2f Kd:%-5.2f",
+    OLED_Printf(0, 32, OLED_6X8, "Tr Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
                 g_track_kp, g_track_ki, g_track_kd);
 
     /* Y=40: Angle PID */
-    OLED_Printf(0, 40, OLED_6X8, "An Kp:%-5.2f Ki:%-5.2f Kd:%-5.2f",
+    OLED_Printf(0, 40, OLED_6X8, "An Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
                 g_angle_kp, g_angle_ki, g_angle_kd);
 
     OLED_Update();
@@ -154,7 +156,7 @@ int main(void)
     /* ---- 2. IMU 最先初始化 ---- */
     IMU_init();
     delay_ms(100);
-
+    DL_GPIO_setPins(GPIOB, DL_GPIO_PIN_14);
     /* ---- 3. 使能 TIMG6 50Hz 中断 ---- */
     NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);
     NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
@@ -167,21 +169,20 @@ int main(void)
     Motor_Init();
     Control_Init();
 
-    /* ---- 6. SysTick 100Hz 控制循环 ---- */
+    /* ---- 6. SysTick 100Hz 控制循环 (优先级2=低, 不阻塞UART/TIMG6) ---- */
     SysTick_Config(CPUCLK_FREQ / CTRL_LOOP_FREQ_HZ);
+    NVIC_SetPriority(SysTick_IRQn, 2);
 
     OLED_Printf(0, 0, OLED_6X8, "CAR CONTROL");
     OLED_Printf(0, 16, OLED_6X8, "BTN: IDLE TRACK ANGLE");
     OLED_Update();
     
-    uart_printf("OK,ready\r\n");
-
     while (1) {
         /* 高频轮询编码器软件解码 */
         Motor_UpdateLeftEncoder();
         Motor_UpdateRightEncoder();
 
-        /* 按键模式切换: IDLE → TRACK → ANGLE → IDLE */
+        /* 按键模式切换 */
         if (Button_IsPressed()) {
             switch (g_steer_mode) {
             case STEER_MODE_IDLE:  Control_SetMode(STEER_MODE_TRACK); break;
@@ -190,11 +191,10 @@ int main(void)
             }
         }
 
-        /* UART 命令处理 */
+        /* UART PID 调参 */
         if (g_usart_rx_sta & 0x8000) {
             uint16_t len = g_usart_rx_sta & 0x3FFF;
             g_usart_rx_buf[len] = '\0';
-            uart_printf("111");
             ParseCommand((const char *)g_usart_rx_buf);
             g_usart_rx_sta = 0;
         }

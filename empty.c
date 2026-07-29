@@ -143,6 +143,11 @@ static void Display_Update(void)
     OLED_Printf(0, 40, OLED_6X8, "An Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
                 g_angle_kp, g_angle_ki, g_angle_kd);
 
+    /* Y=48: 传感器 12345678 (1=黑线) */
+    OLED_Printf(0, 48, OLED_6X8, "T:%d%d%d%d%d%d%d%d",
+                (TrackN>>7)&1, (TrackN>>6)&1, (TrackN>>5)&1, (TrackN>>4)&1,
+                (TrackN>>3)&1, (TrackN>>2)&1, (TrackN>>1)&1, (TrackN>>0)&1);
+
     OLED_Update();
 }
 

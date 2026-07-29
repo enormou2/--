@@ -1,73 +1,28 @@
 /*
  * Control.h
- * 小车控制架构 — 平均/差分 PWM + 双模式转向环
- *
- * 架构:
- *   LeftPWM  = clamp(AvgPWM + DiffPWM, 0, PWM_PERIOD)
- *   RightPWM = clamp(AvgPWM - DiffPWM, 0, PWM_PERIOD)
- *
- *   速度环 (Speed PID):  AvgPWM  = PID(target_speed,  avg_speed )
- *   转向环 (Steer PID):  DiffPWM = PID(target_steer,  steer_err )
- *     - TRACK 模式: steer_err = Track_Err()  (目标=0)
- *     - ANGLE 模式: steer_err = yaw          (目标=target_yaw)
  */
-
 #ifndef __CONTROL_H
 #define __CONTROL_H
-
 #include <stdint.h>
 
-/* ---- 控制模式 ---- */
-typedef enum {
-    STEER_MODE_IDLE  = 0,  /* 空闲: 电机停止, 方便调试 */
-    STEER_MODE_TRACK = 1,  /* 循迹环: Track_Err() → 转向 PID → DiffPWM */
-    STEER_MODE_ANGLE = 2,  /* 角度环: yaw_error   → 转向 PID → DiffPWM */
-} steer_mode_t;
+typedef enum { STEER_MODE_IDLE=0, STEER_MODE_TRACK=1, STEER_MODE_ANGLE=2 } steer_mode_t;
 
-/* ---- 可配置参数 ---- */
-#define CTRL_PWM_PERIOD      1000      /* PWM 周期 (与 SysConfig 一致) */
-#define CTRL_LOOP_FREQ_HZ    100       /* 控制循环频率 Hz */
-#define CTRL_BASE_SPEED      300       /* 基础速度 (循迹模式最大速度) */
-#define CTRL_MIN_SPEED       200       /* 循迹模式最小速度 */
-#define CTRL_MAX_OFFSET_MM   35.0f     /* 循迹传感器最大偏移 mm */
-#define CTRL_TARGET_YAW      0.0f      /* 角度模式默认目标角度 */
+#define CTRL_PWM_PERIOD    1000
+#define CTRL_LOOP_FREQ_HZ  100
+#define CTRL_BASE_SPEED    300
+#define CTRL_MIN_SPEED     200
+#define CTRL_MAX_OFFSET_MM 35.0f
+#define CTRL_TARGET_YAW    0.0f
 
-/* IMU陀螺辅助LOST漂移估计: 1°累积偏航 ≈ DRIFT_GAIN mm横向偏移 (与速度成正比) */
-#define CTRL_IMU_DRIFT_GAIN             3.0f   /* 偏航→偏移转换因子, 可调 */
-
-/* 五路循迹：前馈 + PID，输出经斜率限制平滑过渡。单传感器触发，25mm间距。 */
-#define CTRL_TRACK_FF_INNER             60.0f  /* 内侧L2/R2触发时前馈基础量 */
-#define CTRL_TRACK_FF_EDGE             120.0f  /* 边缘L1/R1触发时前馈基础量 */
-#define CTRL_TRACK_SLEW_NORMAL          40.0f  /* 正常纠偏每次最大增量 */
-#define CTRL_TRACK_SEARCH_DIFF_PWM     200.0f  /* 丢线搜索力度 */
-#define CTRL_TRACK_SEARCH_SLEW_PWM      35.0f  /* 搜索纠偏斜率限制 */
-#define CTRL_TRACK_LOST_STOP_TICKS      35U    /* 100 Hz 下约 350 ms */
-
-/* ---- 外露变量 (用于 UART 调试/调参) ---- */
 extern steer_mode_t g_steer_mode;
-extern float        g_target_speed;    /* 角度模式下固定目标速度 */
-extern float        g_target_yaw;      /* 角度模式下目标角度 */
-
-/* ---- PID 参数 (UART 可实时修改) ---- */
+extern float g_target_speed, g_target_yaw;
 extern float g_speed_kp, g_speed_ki, g_speed_kd;
 extern float g_track_kp, g_track_ki, g_track_kd;
 extern float g_angle_kp, g_angle_ki, g_angle_kd;
 
-/* ---- API ---- */
-
-/** @brief 初始化控制模块 (PID参数、默认模式) */
 void Control_Init(void);
-
-/** @brief 切换转向环模式 */
-void Control_SetMode(steer_mode_t mode);
-
-/** @brief 设置目标速度 (角度模式用) */
-void Control_SetTargetSpeed(float speed);
-
-/** @brief 设置目标角度 (角度模式用) */
-void Control_SetTargetYaw(float yaw);
-
-/** @brief 主控制迭代 — 由定时中断周期性调用 (100Hz) */
+void Control_SetMode(steer_mode_t m);
+void Control_SetTargetSpeed(float s);
+void Control_SetTargetYaw(float y);
 void Control_Update(void);
-
 #endif

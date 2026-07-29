@@ -37,7 +37,13 @@ void Motor_Init(void)
     /* 启动 PWM 定时器 */
     DL_TimerG_startCounter(PWM_MOTOR_INST);
 
-    /* 左编码器 PA6/PA7 (SysConfig 已配置为上拉输入，软件解码) */
+    /* 左编码器 PB22/PB23 — 手动配置 (未在SysConfig中) */
+    DL_GPIO_initDigitalInputFeatures(IOMUX_PINCM50, DL_GPIO_INVERSION_DISABLE,
+                                     DL_GPIO_RESISTOR_PULL_UP, DL_GPIO_HYSTERESIS_DISABLE,
+                                     DL_GPIO_WAKEUP_DISABLE);
+    DL_GPIO_initDigitalInputFeatures(IOMUX_PINCM51, DL_GPIO_INVERSION_DISABLE,
+                                     DL_GPIO_RESISTOR_PULL_UP, DL_GPIO_HYSTERESIS_DISABLE,
+                                     DL_GPIO_WAKEUP_DISABLE);
 }
 
 /* ========================================================================
@@ -134,9 +140,11 @@ int32_t Motor_GetLeftEncoder(void)
 
 void Motor_UpdateLeftEncoder(void)
 {
-    uint32_t a = DL_GPIO_readPins(GPIO_GRP_1_PORT, GPIO_GRP_1_ENC_L_A_PIN) ? 1 : 0;
-    uint32_t b = DL_GPIO_readPins(GPIO_GRP_2_PORT, GPIO_GRP_2_ENC_L_B_PIN) ? 1 : 0;
-    uint8_t  curr = (uint8_t)((a << 1) | b);
+    /* 原子读取 A/B 两相 (PB22, PB23 同属 GPIOB) */
+    uint32_t pins = DL_GPIO_readPins(GPIOB,
+                       DL_GPIO_PIN_22 | DL_GPIO_PIN_23);
+    uint8_t curr = (uint8_t)(((pins & DL_GPIO_PIN_22) ? 2 : 0) |
+                             ((pins & DL_GPIO_PIN_23) ? 1 : 0));
 
     if (curr != enc_l_last) {
         enc_l_count += enc_table[enc_l_last][curr];

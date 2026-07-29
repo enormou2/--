@@ -24,13 +24,25 @@ float        g_target_yaw   = CTRL_TARGET_YAW;
 
 /* ---- PID 参数 (UART 可调) ---- */
 float g_speed_kp = 1.0f,  g_speed_ki = 0.0f,  g_speed_kd = 0.0f;
-float g_track_kp = 15.0f, g_track_ki = 0.0f, g_track_kd = 0.0f;
+/* Kp scales the discrete steering levels; Ki/Kd remain for UART compatibility. */
+float g_track_kp = 8.0f,  g_track_ki = 0.0f, g_track_kd = 0.0f;
 float g_angle_kp = 10.0f, g_angle_ki = 0.0f,g_angle_kd = 0.0f;
 
 /* ---- PID 对象 ---- */
 static PID_t speed_pid;   /* 速度环 → AvgPWM */
-static PID_t track_pid;   /* 循迹环 → DiffPWM */
+static PID_t track_pid;   /* 循迹转向环 → DiffPWM (连续 Track_Err 驱动) */
 static PID_t angle_pid;   /* 角度环 → DiffPWM */
+
+typedef enum {
+    TRACK_RECOVERY_NONE = 0,
+    TRACK_RECOVERY_LEFT,
+    TRACK_RECOVERY_RIGHT,
+    TRACK_RECOVERY_STOPPED,
+} track_recovery_t;
+
+static track_recovery_t s_track_recovery = TRACK_RECOVERY_NONE;
+static float            s_track_diff_pwm = 0.0f;
+static uint16_t         s_track_lost_ticks = 0;
 
 /* ---- 外部引用 ---- */
 extern float ypr[3];  /* ypr[0]=yaw, 由 IMU 50Hz 更新 */
@@ -47,12 +59,12 @@ void Control_Init(void)
     speed_pid.ErrorIntMax =  200.0f;
     speed_pid.ErrorIntMin = -200.0f;
 
-    /* ---- 循迹环 PID ---- */
+    /* ---- 循迹转向 PID (连续 Track_Err → DiffPWM) ---- */
     PID_Init(&track_pid);
-    track_pid.OutMax      =  500;
-    track_pid.OutMin      = -500;
-    track_pid.ErrorIntMax =  100.0f;
-    track_pid.ErrorIntMin = -100.0f;
+    track_pid.OutMax      =  400;
+    track_pid.OutMin      = -400;
+    track_pid.ErrorIntMax =  150.0f;
+    track_pid.ErrorIntMin = -150.0f;
 
     /* ---- 角度环 PID ---- */
     PID_Init(&angle_pid);
@@ -63,6 +75,9 @@ void Control_Init(void)
 
     /* 默认模式: 空闲 */
     g_steer_mode = STEER_MODE_IDLE;
+    s_track_recovery = TRACK_RECOVERY_NONE;
+    s_track_diff_pwm = 0.0f;
+    s_track_lost_ticks = 0;
 }
 
 /* ========================================================================
@@ -81,10 +96,12 @@ static void Control_SyncPID(void)
 void Control_SetMode(steer_mode_t mode)
 {
     g_steer_mode = mode;
+    s_track_recovery = TRACK_RECOVERY_NONE;
+    s_track_diff_pwm = 0.0f;
+    s_track_lost_ticks = 0;
+
     /* 切换模式时重置对应 PID 积分 */
-    if (mode == STEER_MODE_TRACK) {
-        track_pid.ErrorInt = 0.0f;
-    } else if (mode == STEER_MODE_ANGLE) {
+    if (mode == STEER_MODE_ANGLE) {
         angle_pid.ErrorInt = 0.0f;
     } else {
         Motor_SetLeftSpeed(0);
@@ -117,6 +134,109 @@ static float clampf(float val, float lo, float hi)
     return val;
 }
 
+static float Control_Slew(float current, float target, float max_step)
+{
+    float delta = target - current;
+
+    if (delta > max_step) return current + max_step;
+    if (delta < -max_step) return current - max_step;
+    return target;
+}
+
+/*
+ * Hybrid steering: feed-forward (immediate) + PID feedback (fine-tuning + integral).
+ *
+ * With 25mm sensor spacing, only one sensor fires at a time.
+ * Track_Err() returns EMA-smoothed discrete levels: 0, ±25, ±45 mm.
+ *
+ * Feed-forward gives instant strong correction the moment a sensor triggers.
+ * PID adds proportional fine-tuning and integral to kill steady-state drift.
+ * Integral resets on state change to prevent windup across sensor transitions.
+ */
+static void Control_UpdateTrackSteering(track_state_t state, float track_err, float *diff_pwm)
+{
+    float ff = 0.0f;  /* feed-forward base */
+
+    /* ---- Determine feed-forward from discrete sensor state ---- */
+    switch (state) {
+    case TRACK_STATE_CENTER:
+        ff = 0.0f;
+        s_track_recovery = TRACK_RECOVERY_NONE;
+        s_track_lost_ticks = 0;
+        break;
+
+    case TRACK_STATE_LEFT_INNER:
+        ff = -CTRL_TRACK_FF_INNER;
+        s_track_recovery = TRACK_RECOVERY_LEFT;
+        s_track_lost_ticks = 0;
+        break;
+
+    case TRACK_STATE_RIGHT_INNER:
+        ff =  CTRL_TRACK_FF_INNER;
+        s_track_recovery = TRACK_RECOVERY_RIGHT;
+        s_track_lost_ticks = 0;
+        break;
+
+    case TRACK_STATE_LEFT_EDGE:
+        ff = -CTRL_TRACK_FF_EDGE;
+        s_track_recovery = TRACK_RECOVERY_LEFT;
+        s_track_lost_ticks = 0;
+        break;
+
+    case TRACK_STATE_RIGHT_EDGE:
+        ff =  CTRL_TRACK_FF_EDGE;
+        s_track_recovery = TRACK_RECOVERY_RIGHT;
+        s_track_lost_ticks = 0;
+        break;
+
+    case TRACK_STATE_LOST:
+    case TRACK_STATE_UNKNOWN:
+    default:
+        /* Lost: search in last known direction, then timeout → straight */
+        if (s_track_recovery == TRACK_RECOVERY_LEFT) {
+            ff = -CTRL_TRACK_SEARCH_DIFF_PWM;
+        } else if (s_track_recovery == TRACK_RECOVERY_RIGHT) {
+            ff =  CTRL_TRACK_SEARCH_DIFF_PWM;
+        } else {
+            s_track_recovery = TRACK_RECOVERY_STOPPED;
+            *diff_pwm = 0.0f;
+            return;
+        }
+
+        if (++s_track_lost_ticks >= CTRL_TRACK_LOST_STOP_TICKS) {
+            s_track_recovery = TRACK_RECOVERY_STOPPED;
+            *diff_pwm = 0.0f;
+            return;
+        }
+
+        s_track_diff_pwm = Control_Slew(s_track_diff_pwm, ff, CTRL_TRACK_SEARCH_SLEW_PWM);
+        *diff_pwm = s_track_diff_pwm;
+        return;
+    }
+
+    /* ---- Reset PID integral on state change to prevent windup ---- */
+    {
+        static track_state_t last_state = TRACK_STATE_CENTER;
+        if (state != last_state) {
+            track_pid.ErrorInt = 0.0f;
+            last_state = state;
+        }
+    }
+
+    /* ---- PID on EMA-smoothed Track_Err for proportional + integral trim ---- */
+    track_pid.Target = 0.0f;
+    track_pid.Actual = -track_err;
+    PID_Update(&track_pid);
+
+    /* ---- Slew-rate limit total output to prevent sudden jerks ---- */
+    {
+        static float s_normal_out = 0.0f;
+        float target = ff + track_pid.Out;
+        s_normal_out = Control_Slew(s_normal_out, target, CTRL_TRACK_SLEW_NORMAL);
+        *diff_pwm = s_normal_out;
+    }
+}
+
 /* ========================================================================
  * Control_Update — 主控制迭代 (100Hz 调用)
  * ======================================================================== */
@@ -124,14 +244,16 @@ void Control_Update(void)
 {
     motor_speed_t spd;
     float track_err = 0.0f, target_spd;
+    track_state_t track_state;
     float avg_pwm, diff_pwm;
-    int16_t left_pwm, right_pwm;  
+    int16_t left_pwm, right_pwm;
 
     /* ---- 始终读取速度 & 循迹 (IDLE 也需要更新 OLED 显示) ---- */
     Motor_UpdateSpeed();
     Motor_GetSpeed(&spd);
     Read_Track_DATA(&TrackN);
     track_err = Track_Err(0);
+    track_state = Track_GetState();
 
     /* ---- IDLE 模式: 不控制电机 ---- */
     if (g_steer_mode == STEER_MODE_IDLE) {
@@ -146,6 +268,10 @@ void Control_Update(void)
         float ratio = 1.0f - fabsf(track_err) / CTRL_MAX_OFFSET_MM;
         if (ratio < 0.0f) ratio = 0.0f;
         target_spd = CTRL_MIN_SPEED + (CTRL_BASE_SPEED - CTRL_MIN_SPEED) * ratio;
+        if (track_state == TRACK_STATE_LEFT_EDGE ||
+            track_state == TRACK_STATE_RIGHT_EDGE) {
+            target_spd = CTRL_MIN_SPEED;
+        }
     } else {
         target_spd = g_target_speed;
     }
@@ -157,10 +283,7 @@ void Control_Update(void)
 
     /* ---- 3. 转向环 ---- */
     if (g_steer_mode == STEER_MODE_TRACK) {
-        track_pid.Target = 0.0f;
-        track_pid.Actual = -track_err;
-        PID_Update(&track_pid);
-        diff_pwm = track_pid.Out;
+        Control_UpdateTrackSteering(track_state, track_err, &diff_pwm);
     } else {
         angle_pid.Target = g_target_yaw;
         angle_pid.Actual = ypr[0];

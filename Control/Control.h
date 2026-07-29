@@ -32,6 +32,14 @@ typedef enum {
 #define CTRL_MAX_OFFSET_MM   35.0f     /* 循迹传感器最大偏移 mm */
 #define CTRL_TARGET_YAW      0.0f      /* 角度模式默认目标角度 */
 
+/* 五路循迹：前馈 + PID，输出经斜率限制平滑过渡。单传感器触发，25mm间距。 */
+#define CTRL_TRACK_FF_INNER             60.0f  /* 内侧L2/R2触发时前馈基础量 */
+#define CTRL_TRACK_FF_EDGE             120.0f  /* 边缘L1/R1触发时前馈基础量 */
+#define CTRL_TRACK_SLEW_NORMAL          40.0f  /* 正常纠偏每次最大增量 */
+#define CTRL_TRACK_SEARCH_DIFF_PWM     200.0f  /* 丢线搜索力度 */
+#define CTRL_TRACK_SEARCH_SLEW_PWM      35.0f  /* 搜索纠偏斜率限制 */
+#define CTRL_TRACK_LOST_STOP_TICKS      35U    /* 100 Hz 下约 350 ms */
+
 /* ---- 外露变量 (用于 UART 调试/调参) ---- */
 extern steer_mode_t g_steer_mode;
 extern float        g_target_speed;    /* 角度模式下固定目标速度 */

@@ -112,8 +112,8 @@ int setup_imu(int use_ln, int accel_en, int gyro_en)
     imu_dev.transport.serif_type = UI_I2C;
     imu_dev.transport.sleep_us   = delay_us;
 
-    /* Wait 3 ms for device to power up */
-    delay_us(3000);
+    /* Wait 20 ms for device to power up (ICM45686 needs ~10ms+ from cold boot) */
+    delay_ms(20);
 
     /* Check WHOAMI */
     rc |= inv_imu_get_who_am_i(&imu_dev, &whoami);
@@ -127,6 +127,7 @@ int setup_imu(int use_ln, int accel_en, int gyro_en)
 
     rc |= inv_imu_soft_reset(&imu_dev);
     SI_CHECK_RC(rc);
+    delay_ms(5);   /* Wait for soft reset to complete */
 
     /* Configure interrupt pin (INT1): active-high, pulse, push-pull */
     int_pin_config.int_polarity = INTX_CONFIG2_INTX_POLARITY_HIGH;

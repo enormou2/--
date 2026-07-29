@@ -50,23 +50,34 @@ extern int setup_imu(int use_ln, int accel_en, int gyro_en);
 输出参数：没有
 *******************************************************************************/
 void IMU_init(void)
-{	 
-	//while(!ICM_Init());	   //初始化ICM42688配置
-	if (0x00 == setup_imu(1,1,1))
-	{
-		//Initial_Timer3();
-		// initialize quaternion
-		q0 = 1.0f;  //初始化四元数
-		q1 = 0.0f;
-		q2 = 0.0f;
-		q3 = 0.0f;
-		exInt = 0.0;
-		eyInt = 0.0;
-		ezInt = 0.0;
+{
+	int imu_ok = 0;
+	int retry;
 
-		return;
+	/* Retry IMU init up to 5 times (cold boot may need extra time) */
+	for (retry = 0; retry < 5; retry++) {
+		if (0x00 == setup_imu(1,1,1)) {
+			imu_ok = 1;
+			break;
+		}
+		/* Wait longer each retry: 50ms, 100ms, 150ms... */
+		for (volatile int i = 0; i < (retry + 1) * 50000; i++) {
+			delay_cycles(CPUCLK_FREQ / 1000000);
+		}
 	}
-	printf("IMU ERROR!!\r\n");
+
+	/* Always initialize quaternion (even if IMU failed, avoid all-zero stuck state) */
+	q0 = 1.0f;
+	q1 = 0.0f;
+	q2 = 0.0f;
+	q3 = 0.0f;
+	exInt = 0.0;
+	eyInt = 0.0;
+	ezInt = 0.0;
+
+	if (!imu_ok) {
+		printf("IMU ERROR!! (retried %d times)\r\n", retry);
+	}
 }
 
 static double Gyro_fill[3][300];
@@ -278,7 +289,7 @@ axyz是测量得到的重力向量，vxyz是陀螺积分后的姿态来推算出
 向量间的误差，可以用向量叉积（也叫向量外积、叉乘）来表示，exyz就是两个重力向量的叉积。
 这个叉积向量仍旧是位于机体坐标系上的，而陀螺积分误差也是在机体坐标系，而且叉积的大小与陀螺积分误差成正比，正好拿来纠正陀螺。（你可以自己拿东西想象一下）由于陀螺是对机体直接积分，所以对陀螺的纠正量会直接体现在对机体坐标系的纠正。
   */
-if(ex != 0.0f && ey != 0.0f && ez != 0.0f){
+if(ex != 0.0f || ey != 0.0f || ez != 0.0f){
   exInt = exInt + ex * Ki * halfT;
   eyInt = eyInt + ey * Ki * halfT;	
   ezInt = ezInt + ez * Ki * halfT;

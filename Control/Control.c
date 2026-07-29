@@ -45,7 +45,9 @@ static float            s_track_diff_pwm = 0.0f;
 static uint16_t         s_track_lost_ticks = 0;
 
 /* ---- 外部引用 ---- */
-extern float ypr[3];  /* ypr[0]=yaw, 由 IMU 50Hz 更新 */
+extern float ypr[3];              /* ypr[0]=yaw, 由 IMU 50Hz 更新 */
+extern float TTangles_gyro[7];    /* [3]=gx_dps [4]=gy_dps [5]=gz_dps */
+extern volatile float g_track_err;/* OLED 显示用，避免 Track_Err 浮点重入 */
 
 /* ========================================================================
  * Control_Init
@@ -254,6 +256,35 @@ void Control_Update(void)
     Read_Track_DATA(&TrackN);
     track_err = Track_Err(0);
     track_state = Track_GetState();
+
+    /* ---- IMU gyro-assisted drift estimation when line is lost ---- */
+    {
+        static float lost_yaw_deg = 0.0f;
+        static float last_valid_err = 0.0f;
+
+        if (track_state == TRACK_STATE_LOST ||
+            track_state == TRACK_STATE_UNKNOWN) {
+            float gyro_z_dps = TTangles_gyro[5];  /* already offset-corrected */
+            lost_yaw_deg += gyro_z_dps * 0.01f;   /* 100Hz → dt=0.01s */
+
+            float speed_ratio = spd.avg / (float)CTRL_BASE_SPEED;
+            if (speed_ratio < 0.1f) speed_ratio = 0.1f;
+            if (speed_ratio > 1.5f) speed_ratio = 1.5f;
+
+            /* Virtual offset: last valid position + gyro drift estimate */
+            /* Positive gyro(CW) → car yaws right → line appears left → neg err */
+            track_err = last_valid_err
+                      - CTRL_IMU_DRIFT_GAIN * speed_ratio * lost_yaw_deg;
+
+            if (track_err >  45.0f) track_err =  45.0f;
+            if (track_err < -45.0f) track_err = -45.0f;
+        } else {
+            lost_yaw_deg = 0.0f;
+            last_valid_err = track_err;
+        }
+    }
+
+    g_track_err = track_err;  /* 缓存给主循环OLED显示, 避免Track_Err浮点重入 */
 
     /* ---- IDLE 模式: 不控制电机 ---- */
     if (g_steer_mode == STEER_MODE_IDLE) {

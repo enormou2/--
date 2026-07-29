@@ -32,6 +32,9 @@ typedef enum {
 #define CTRL_MAX_OFFSET_MM   35.0f     /* 循迹传感器最大偏移 mm */
 #define CTRL_TARGET_YAW      0.0f      /* 角度模式默认目标角度 */
 
+/* IMU陀螺辅助LOST漂移估计: 1°累积偏航 ≈ DRIFT_GAIN mm横向偏移 (与速度成正比) */
+#define CTRL_IMU_DRIFT_GAIN             3.0f   /* 偏航→偏移转换因子, 可调 */
+
 /* 五路循迹：前馈 + PID，输出经斜率限制平滑过渡。单传感器触发，25mm间距。 */
 #define CTRL_TRACK_FF_INNER             60.0f  /* 内侧L2/R2触发时前馈基础量 */
 #define CTRL_TRACK_FF_EDGE             120.0f  /* 边缘L1/R1触发时前馈基础量 */

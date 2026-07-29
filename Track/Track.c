@@ -5,16 +5,23 @@
  * 传感器布局: L1=-45mm  L2=-25mm  Center=0  R2=25mm  R1=45mm
  * 引脚映射:   TRACK1=PB2  TRACK2=PB3  TRACK3=PB4  TRACK4=PB5  TRACK5=PB6
  * 上拉输入:   黑线 → 低电平(0), 白底 → 高电平(1)
+ *
+ * 滤波策略:
+ *   Read_Track_DATA: 2帧均值滤波 — 消除单次读取出错
+ *   Track_Err:       EMA低通滤波 — 消除二值传感器的量化跳变, 防止直线抖动
  */
 
 #include "ti_msp_dl_config.h"
 #include "Track/Track.h"
 
-uint8_t TrackN;  /* 5bit传感器状态: bit4=Track1(最左) ... bit0=Track5(最右), 0=黑线 */
+/* EMA 平滑系数: 越大响应越快, 越小越平滑 (范围 0.1~0.5) */
+#define TRACK_EMA_ALPHA  0.25f
+
+uint8_t TrackN;  /* 5bit传感器状态: bit4=Track1(最左) ... bit0=Track5(最右), 1=黑线 */
 
 /*
  *  ======== Read_Track_DATA ========
- *  读取 5 路传感器并做均值滤波
+ *  读取 5 路传感器并做 2 帧均值滤波
  */
 void Read_Track_DATA(uint8_t *arr)
 {
@@ -34,7 +41,7 @@ void Read_Track_DATA(uint8_t *arr)
                               (strackarr[2] << 2) | (strackarr[1] << 3) |
                               (strackarr[0] << 4));
 
-    /* 均值滤波 */
+    /* 2 帧均值滤波：消除毛刺 */
     TrackN = (uint8_t)((current_track + last_track) / 2);
     last_track = current_track;
     *arr = TrackN;
@@ -42,32 +49,48 @@ void Read_Track_DATA(uint8_t *arr)
 
 /*
  *  ======== Track_Err ========
- *  根据传感器状态计算黑线中心偏移（mm）
- *  car_state: 小车状态码（保留，可用于特殊状态修正）
- *  返回值: 黑线中心相对于模块中心的偏移，正值偏右、负值偏左
+ *  计算黑线中心偏移（mm），带 EMA 低通滤波消除二值传感器量化跳变
+ *
+ *  传感器布局:  L1=-45  L2=-25  C=0  R2=25  R1=45 (mm)
+ *  黑线 ~18mm 宽，最多覆盖相邻 2 个传感器
+ *
+ *  EMA 滤波效果（alpha=0.25, 100Hz 调用）:
+ *    传感器跳变 0→25mm → 10ms后=6.3mm, 40ms后=17mm, 100ms后≈24mm
+ *    消除瞬时尖峰，保留真实偏移趋势
+ *
+ *  car_state: 保留
+ *  返回值:  滤波后的偏移（mm），正值偏右
  */
 float Track_Err(uint16_t car_state)
 {
-    /* 5个探头物理位置（mm）: L1=-45, L2=-25, Center=0, R2=25, R1=45 */
     static const float pos[5] = {-45.0f, -25.0f, 0.0f, 25.0f, 45.0f};
+    static float       s_filt = 0.0f;  /* EMA 滤波状态 */
 
     float   sum   = 0.0f;
     uint8_t count = 0;
 
+    /* 计算激活传感器的质心 */
     for (uint8_t i = 0; i < 5; i++) {
-        /* bit4=Track1(最左) ... bit0=Track5(最右) */
-        uint8_t bit_val = (TrackN >> (4 - i)) & 0x01;
-        if (bit_val == 1) {  /* 1 = 检测到黑线 */
+        if ((TrackN >> (4 - i)) & 0x01) {
             sum += pos[i];
             count++;
         }
     }
 
-    if (count == 0 || count == 5)
-        return 0.0f;  /* 全白或全黑，无有效偏移 */
+    /* 全白(丢线) 或 全黑(路口) → 直行 + 复位滤波器 */
+    if (count == 0 || count == 5) {
+        s_filt = 0.0f;
+        (void)car_state;
+        return 0.0f;
+    }
 
-    (void)car_state;  /* 保留参数，后续可扩展状态修正 */
-    return sum / (float)count;  /* 黑线中心偏移（mm） */
+    float raw = sum / (float)count;
+
+    /* EMA 低通滤波: 消除二值量化跳变 */
+    s_filt = s_filt * (1.0f - TRACK_EMA_ALPHA) + raw * TRACK_EMA_ALPHA;
+
+    (void)car_state;
+    return s_filt;
 }
 
 /*

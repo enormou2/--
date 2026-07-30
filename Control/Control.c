@@ -22,7 +22,7 @@ float        g_target_yaw   = CTRL_TARGET_YAW;
 
 /* ---- PID 参数 (UART 可调) ---- */
 float g_speed_kp = 1.40f, g_speed_ki = 0.05f,  g_speed_kd = 0.0f;
-float g_track_kp = 9.0f,  g_track_ki = 0.1f,  g_track_kd = 4.5f;
+float g_track_kp = 12.0f,  g_track_ki = 0.15f,  g_track_kd = 2.0f;
 float g_angle_kp = 10.0f, g_angle_ki = 0.0f,  g_angle_kd = 0.0f;
 
 /* ---- 内部状态 ---- */

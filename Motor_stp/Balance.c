@@ -1,0 +1,362 @@
+/*
+ * Balance.c — 小球平衡控制模块实现
+ *
+ * ============================ UART1 通信 ============================
+ *
+ * K230 摄像头通过 UART1 发送球位置数据, 格式:
+ *   "x:+3.2\r\n"  球在中心右侧 3.2cm
+ *   "x:-1.5\r\n"  球在中心左侧 1.5cm
+ *   "x:0.0\r\n"   球在中心
+ *
+ * 波特率: 115200-8-N-1 —【待确认, K230 端确定后可能需要改】
+ * 帧率: 22-24fps (每 42-45ms 一帧)
+ *
+ * ============================ 增量式 PID ============================
+ *
+ * 公式 (每个控制周期):
+ *   error = target - actual
+ *   delta = Kp * (error - error_prev)
+ *         + Ki * error * dt
+ *         + Kd * (error - 2*error_prev + error_prev2) / dt
+ *   output += delta
+ *   clamp(output)
+ *
+ * 由于 dt 在摄像头帧率下不恒定, 这里简化处理:
+ *   - 直接用帧序号作为"时间单位" (每帧一次控制)
+ *   - dt 隐含在 Kp/Ki/Kd 中, 调参时一并处理
+ *   - 如果后续发现帧率波动大, 可改为记录实际 dt
+ *
+ * ============================ 备用方案 (注释保留) ============================
+ *
+ * 位置式 PID + 死区:
+ *   直接用现有 PID.c 的 PID_Update, Out 作为目标步数绝对值
+ *   仅在 |Out - last_out| > DEADBAND 时才发送给 StepMotor
+ *   代码在 Balance_Update() 中以 #if 0 块保留
+ */
+
+#include "ti_msp_dl_config.h"
+#include "Motor_stp/StepMotor.h"
+#include "Motor_stp/Balance.h"
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+
+/* ========================================================================
+ * 硬件常量
+ * ======================================================================== */
+
+/* UART1 引脚 — ⚠️ MSPM0G3507: PA8=UART1_TX, PA9=UART1_RX */
+#define BAL_UART_RX_PORT     GPIOA
+#define BAL_UART_RX_PIN      DL_GPIO_PIN_9
+#define BAL_UART_RX_IOMUX    IOMUX_PINCM20
+#define BAL_UART_RX_FUNC     IOMUX_PINCM20_PF_UART1_RX
+
+#define BAL_UART_TX_PORT     GPIOA
+#define BAL_UART_TX_PIN      DL_GPIO_PIN_8
+#define BAL_UART_TX_IOMUX    IOMUX_PINCM19
+#define BAL_UART_TX_FUNC     IOMUX_PINCM19_PF_UART1_TX
+
+/* UART1 波特率 —【待确认, 与 K230 端一致】*/
+#define BAL_UART_BAUD        115200
+
+/* ========================================================================
+ * 全局 PID 参数 (运行时可通过 UART 或 UART 调试命令修改)
+ * ======================================================================== */
+float g_bal_kp = BAL_KP_DEFAULT;
+float g_bal_ki = BAL_KI_DEFAULT;
+float g_bal_kd = BAL_KD_DEFAULT;
+
+/* ========================================================================
+ * 静态变量 (模块内部状态)
+ * ======================================================================== */
+
+/* UART1 接收 */
+static char    g_rx_buf[BAL_UART_BUF_LEN];
+static uint8_t g_rx_idx;
+static bool    g_rx_done;        /* 收到完整一帧 (检测到 \n) */
+
+/* 球位置 */
+static float   g_ball_pos;       /* 当前球位置 (cm), 来自摄像头 */
+static bool    g_cam_valid;      /* 摄像头数据是否有效 */
+
+/* 目标 */
+static float   g_target_pos;     /* 目标球位置 (cm) */
+
+/* 增量式 PID 状态 */
+static float   g_error;          /* 当前误差 */
+static float   g_error_prev;     /* 上一帧误差 */
+static float   g_error_prev2;    /* 上上一帧误差 */
+
+/* 步进电机累积目标 (增量式 PID 的输出累加) */
+static int32_t g_step_target;    /* 电机目标步数 */
+
+/* 到位判断 */
+static uint8_t g_settle_cnt;     /* 连续到位帧计数 */
+
+/* ========================================================================
+ * UART1 ISR — 中断接收, 检测 'x:+N.N\r\n' 格式
+ * ======================================================================== */
+void UART1_IRQHandler(void)
+{
+    uint8_t ch;
+
+    switch (DL_UART_Main_getPendingInterrupt(UART1)) {
+    case DL_UART_MAIN_IIDX_RX:
+        ch = DL_UART_Main_receiveData(UART1);
+
+        /* 已收到完整帧但未处理 → 丢弃旧帧, 开始新帧 */
+        if (g_rx_done) {
+            g_rx_idx = 0;
+            g_rx_done = false;
+        }
+
+        if (ch == '\n') {
+            /* 帧结束 */
+            if (g_rx_idx < BAL_UART_BUF_LEN) {
+                g_rx_buf[g_rx_idx] = '\0';
+            } else {
+                g_rx_buf[BAL_UART_BUF_LEN - 1] = '\0';
+            }
+            g_rx_done = true;
+        } else if (ch != '\r') {
+            /* 正常数据字节 */
+            if (g_rx_idx < BAL_UART_BUF_LEN - 1) {
+                g_rx_buf[g_rx_idx++] = (char)ch;
+            }
+            /* 缓冲区满 → 丢弃 (等待下一帧) */
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+
+/* ========================================================================
+ * Balance_ParseChar (保留给外部手动喂字节的场景, 目前由 ISR 直接处理)
+ * ======================================================================== */
+void Balance_ParseChar(uint8_t ch)
+{
+    /*
+     * 当前设计: UART1 ISR 内部直接填充 g_rx_buf 并设置 g_rx_done 标志
+     * 此函数保留给不使用 UART1 ISR 的降级方案 (如轮询模式)
+     * 暂不实现, 保留接口
+     */
+    (void)ch;
+}
+
+/* ========================================================================
+ * parse_camera_data — 解析 "x:+3.2" 或 "x:-1.5" 格式
+ * ======================================================================== */
+static bool parse_camera_data(const char *buf, float *pos)
+{
+    /*
+     * 预期格式: "x:+3.2" 或 "x:-1.5" 或 "x:0.0"
+     * 兼容格式: "+3.2" / "-1.5" (无 x: 前缀)
+     * 解析策略: 跳过前导字符直到遇到 '+' / '-' 或数字
+     */
+
+    const char *p = buf;
+    bool has_sign = false;
+
+    /* 跳过非数字/非符号字符 */
+    while (*p && *p != '+' && *p != '-' && (*p < '0' || *p > '9')) {
+        p++;
+    }
+
+    if (*p == '\0') return false;  /* 无线索 */
+
+    if (*p == '+' || *p == '-') {
+        has_sign = true;
+    }
+
+    /* 尝试 strtof */
+    char *end;
+    float val = strtof(p, &end);
+
+    /* 检查是否实际解析到数字 */
+    if (end == p) return false;
+    (void)has_sign;
+
+    *pos = val;
+    return true;
+}
+
+/* ========================================================================
+ * Balance_Init
+ * ======================================================================== */
+void Balance_Init(void)
+{
+    /* ---- 1. 配置 UART1 引脚 (手动, 不走 SysConfig) ---- */
+    DL_GPIO_initPeripheralFunction(BAL_UART_RX_IOMUX, BAL_UART_RX_FUNC);
+    DL_GPIO_initPeripheralFunction(BAL_UART_TX_IOMUX, BAL_UART_TX_FUNC);
+
+    /* ---- 2. 初始化 UART1 ---- */
+    DL_UART_Main_init(UART1,
+        DL_UART_MAIN_CLOCK_BUSCLK,       /* 时钟源: BUSCLK 80MHz */
+        BAL_UART_BAUD);                   /* 波特率 【待确认】 */
+
+    /* 使能 FIFO, 单字节 RX 中断 */
+    DL_UART_Main_enableFIFO(UART1);
+    DL_UART_Main_setRXFIFOThreshold(UART1,
+        DL_UART_RX_FIFO_LEVEL_ONE_ENTRY);
+    DL_UART_Main_enableInterrupt(UART1,
+        DL_UART_MAIN_INTERRUPT_RX);
+
+    /* ---- 3. 使能 UART1 NVIC 中断 (优先级=0, 与 UART0 相同) ---- */
+    NVIC_ClearPendingIRQ(UART1_INT_IRQN);
+    NVIC_SetPriority(UART1_INT_IRQN, 0);
+    NVIC_EnableIRQ(UART1_INT_IRQN);
+
+    /* ---- 4. 初始化内部状态 ---- */
+    g_rx_idx       = 0;
+    g_rx_done      = false;
+    g_ball_pos     = 0.0f;
+    g_cam_valid    = false;
+    g_target_pos   = 0.0f;
+    g_error        = 0.0f;
+    g_error_prev   = 0.0f;
+    g_error_prev2  = 0.0f;
+    g_step_target  = 0;
+    g_settle_cnt   = 0;
+}
+
+/* ========================================================================
+ * Balance_SetTarget
+ * ======================================================================== */
+void Balance_SetTarget(float pos_cm)
+{
+    g_target_pos = pos_cm;
+    g_settle_cnt = 0;  /* 目标变了, 重置到位计数 */
+}
+
+/* ========================================================================
+ * Balance_IsSettled
+ * ======================================================================== */
+bool Balance_IsSettled(void)
+{
+    return (g_settle_cnt >= BAL_SETTLE_COUNT);
+}
+
+/* ========================================================================
+ * Balance_GetPosition
+ * ======================================================================== */
+float Balance_GetPosition(void)
+{
+    return g_ball_pos;
+}
+
+/* ========================================================================
+ * Balance_GetMotorSteps
+ * ======================================================================== */
+int32_t Balance_GetMotorSteps(void)
+{
+    return g_step_target;
+}
+
+/* ========================================================================
+ * Balance_Update — 主控制循环 (SysTick 100Hz, 仅在新帧时计算)
+ * ======================================================================== */
+void Balance_Update(void)
+{
+    float error, delta, abs_error;
+
+    /* ---- 检查是否有新摄像头数据 ---- */
+    if (!g_rx_done) return;
+    g_rx_done = false;
+
+    /* ---- 解析摄像头数据 ---- */
+    if (!parse_camera_data(g_rx_buf, &g_ball_pos)) {
+        /* 解析失败 → 丢弃此帧, 位置保持上一帧值 */
+        g_cam_valid = false;
+        return;
+    }
+    g_cam_valid = true;
+
+    /* ---- 计算误差 ---- */
+    error = g_target_pos - g_ball_pos;
+
+    /* ================================================================
+     * 【主力方案】增量式 PID
+     * ================================================================ */
+
+    /* 滑动误差历史 */
+    g_error_prev2 = g_error_prev;
+    g_error_prev  = g_error;
+    g_error       = error;
+
+    /* 增量式 PID:
+     * delta = Kp*(e - e_prev) + Ki*e + Kd*(e - 2*e_prev + e_prev2)
+     * dt 隐含在 Ki/Kd 系数中 (帧率 ≈ 23Hz → dt ≈ 0.043s)
+     *
+     * 注意: Ki 项使用当前 e 而非 e 的积分。增量式 PID 的 I 项
+     * 等价于对位置误差求一次差分后再累加，即"误差的误差"。
+     * 这里直接使用 e (当前误差) 作为 I 增量，物理含义是
+     * "持续有偏差时逐步加大输出"，和传统增量式 PID 一致。
+     */
+    delta = g_bal_kp * (g_error - g_error_prev)
+          + g_bal_ki * g_error
+          + g_bal_kd * (g_error - 2.0f * g_error_prev + g_error_prev2);
+
+    /* 输出限幅 */
+    if (delta > BAL_DELTA_MAX)  delta = BAL_DELTA_MAX;
+    if (delta < BAL_DELTA_MIN)  delta = BAL_DELTA_MIN;
+
+    /* 累积目标步数 */
+    g_step_target += (int32_t)delta;
+
+    /* 安全软限位 (StepMotor_SetTarget 内部也会 clamp, 这里双重保险) */
+    if (g_step_target > STEP_SOFT_LIMIT_MAX)  g_step_target = STEP_SOFT_LIMIT_MAX;
+    if (g_step_target < STEP_SOFT_LIMIT_MIN)  g_step_target = STEP_SOFT_LIMIT_MIN;
+
+    /* 发送给步进电机 */
+    StepMotor_SetTarget(g_step_target);
+
+    /* ================================================================
+     * 【备用方案】位置式 PID + 死区 (注释保留, 需要时取消注释)
+     * ================================================================
+     * 使用方法:
+     *   1. 注释掉上方增量式 PID 代码块
+     *   2. 取消下方注释
+     *   3. 通过 UART 命令切换 PID 参数 (速度/转向 PID 调参机制复用)
+     *
+     * #if 0
+     * {
+     *     static PID_t bal_pid;
+     *     static float  last_out = 0;
+     *     static bool   pid_inited = false;
+     *     #define BAL_PID_DEADBAND  10.0f
+     *
+     *     if (!pid_inited) {
+     *         bal_pid.Kp = BAL_KP_POS_DEFAULT;  // 需定义
+     *         bal_pid.Ki = BAL_KI_POS_DEFAULT;
+     *         bal_pid.Kd = BAL_KD_POS_DEFAULT;
+     *         bal_pid.Target = 0;
+     *         bal_pid.OutMax = STEP_SOFT_LIMIT_MAX;
+     *         bal_pid.OutMin = STEP_SOFT_LIMIT_MIN;
+     *         PID_Init(&bal_pid);
+     *         pid_inited = true;
+     *     }
+     *
+     *     bal_pid.Target = g_target_pos;  // 注意: Target 是 cm, 但 PID 内部不管单位
+     *     bal_pid.Actual = g_ball_pos;
+     *     PID_Update(&bal_pid);
+     *
+     *     if (fabsf(bal_pid.Out - last_out) > BAL_PID_DEADBAND) {
+     *         StepMotor_SetTarget((int32_t)bal_pid.Out);
+     *         last_out = bal_pid.Out;
+     *     }
+     * }
+     * #endif
+     * ================================================================ */
+
+    /* ---- 到位判断 ---- */
+    abs_error = (error > 0) ? error : -error;
+    if (abs_error < BAL_SETTLE_THRESHOLD) {
+        if (g_settle_cnt < BAL_SETTLE_COUNT) {
+            g_settle_cnt++;
+        }
+    } else {
+        g_settle_cnt = 0;
+    }
+}

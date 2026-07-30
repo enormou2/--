@@ -242,6 +242,7 @@ UART1.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric0";
 UART1.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric1";
 
 UART2.$name                            = "UART_2";
+UART2.enabledInterrupts                = ["RX"];
 UART2.peripheral.$assign               = "UART2";
 UART2.txPinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric8";
 UART2.txPinConfig.direction            = scripting.forceWrite("OUTPUT");

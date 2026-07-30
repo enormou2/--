@@ -1,0 +1,199 @@
+
+**** Build of configuration 'Debug' for project 'test' ****
+
+"D:\\ti\\ccs2051\\ccs\\utils\\bin\\gmake" -k -j 16 all -r -O 
+ 
+GNU Compiler - building file: "../Motor_stp/Motor_stp.c"
+"C:/TI/gcc_arm_none_eabi_9_2_1/bin/arm-none-eabi-gcc-9.2.1.exe" -c @"device.opt"  -mcpu=cortex-m0plus -march=armv6-m -mthumb -mfloat-abi=soft -I"C:/Users/10959/workspace_ccstheia/test" -I"C:/Users/10959/workspace_ccstheia/test/Debug" -I"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/third_party/CMSIS/Core/Include" -I"D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source" -I"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include/newlib-nano" -I"C:/TI/gcc_arm_none_eabi_9_2_1/arm-none-eabi/include" -O2 -ffunction-sections -fdata-sections -g -gdwarf-3 -gstrict-dwarf -Wall -MMD -MP -MF"Motor_stp/Motor_stp.d_raw" -MT"Motor_stp/Motor_stp.o" -std=c99 @"./device.opt"  -o"Motor_stp/Motor_stp.o" "../Motor_stp/Motor_stp.c"
+../Motor_stp/Motor_stp.c: In function 'Motor_Init':
+../Motor_stp/Motor_stp.c:36:5: error: unknown type name 'DL_TimerA_ClockConfig'
+   36 |     DL_TimerA_ClockConfig clkCfg = {
+      |     ^~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:37:9: error: field name not in record or union initializer
+   37 |         .clockSel    = DL_TIMER_CLOCK_BUSCLK,
+      |         ^
+../Motor_stp/Motor_stp.c:37:9: note: (near initialization for 'clkCfg')
+../Motor_stp/Motor_stp.c:37:24: error: 'DL_TIMER_CLOCK_BUSCLK' undeclared (first use in this function)
+   37 |         .clockSel    = DL_TIMER_CLOCK_BUSCLK,
+      |                        ^~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:37:24: note: each undeclared identifier is reported only once for each function it appears in
+../Motor_stp/Motor_stp.c:38:9: error: field name not in record or union initializer
+   38 |         .divideRatio = DL_TIMER_CLOCK_DIVIDE_1,
+      |         ^
+../Motor_stp/Motor_stp.c:38:9: note: (near initialization for 'clkCfg')
+../Motor_stp/Motor_stp.c:38:24: error: 'DL_TIMER_CLOCK_DIVIDE_1' undeclared (first use in this function)
+   38 |         .divideRatio = DL_TIMER_CLOCK_DIVIDE_1,
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:38:24: warning: excess elements in scalar initializer
+../Motor_stp/Motor_stp.c:38:24: note: (near initialization for 'clkCfg')
+../Motor_stp/Motor_stp.c:39:9: error: field name not in record or union initializer
+   39 |         .prescale    = 31U,   /* 32MHz / 32 = 1MHz */
+      |         ^
+../Motor_stp/Motor_stp.c:39:9: note: (near initialization for 'clkCfg')
+../Motor_stp/Motor_stp.c:39:24: warning: excess elements in scalar initializer
+   39 |         .prescale    = 31U,   /* 32MHz / 32 = 1MHz */
+      |                        ^~~
+../Motor_stp/Motor_stp.c:39:24: note: (near initialization for 'clkCfg')
+../Motor_stp/Motor_stp.c:42:5: warning: implicit declaration of function 'DL_TimerA_stopCounter' [-Wimplicit-function-declaration]
+   42 |     DL_TimerA_stopCounter(GIMBAL_STEP_TIMER);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:42:27: error: 'GIMBAL_STEP_TIMER' undeclared (first use in this function)
+   42 |     DL_TimerA_stopCounter(GIMBAL_STEP_TIMER);
+      |                           ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:43:5: warning: implicit declaration of function 'DL_TimerA_setClockConfig' [-Wimplicit-function-declaration]
+   43 |     DL_TimerA_setClockConfig(GIMBAL_STEP_TIMER, &clkCfg);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:46:5: warning: implicit declaration of function 'DL_TimerA_initPWMMode' [-Wimplicit-function-declaration]
+   46 |     DL_TimerA_initPWMMode(GIMBAL_STEP_TIMER,
+      |     ^~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:47:11: error: 'DL_TimerA_PWMConfig' undeclared (first use in this function)
+   47 |         &(DL_TimerA_PWMConfig){
+      |           ^~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:47:31: error: expected ')' before '{' token
+   47 |         &(DL_TimerA_PWMConfig){
+      |                               ^
+      |                               )
+../Motor_stp/Motor_stp.c:55:5: warning: implicit declaration of function 'DL_TimerA_setCCPDirection' [-Wimplicit-function-declaration]
+   55 |     DL_TimerA_setCCPDirection(GIMBAL_STEP_TIMER,
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:56:9: error: 'DL_TIMER_CC0_OUTPUT' undeclared (first use in this function)
+   56 |         DL_TIMER_CC0_OUTPUT | DL_TIMER_CC3_OUTPUT);
+      |         ^~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:56:31: error: 'DL_TIMER_CC3_OUTPUT' undeclared (first use in this function)
+   56 |         DL_TIMER_CC0_OUTPUT | DL_TIMER_CC3_OUTPUT);
+      |                               ^~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c: In function 'Motor_RpmToPeriodTicks':
+../Motor_stp/Motor_stp.c:67:25: error: 'SPEED_CONST_FACTOR' undeclared (first use in this function)
+   67 |     period = (uint32_t)(SPEED_CONST_FACTOR /
+      |                         ^~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:68:27: error: 'MOTOR_STEPS_PER_REV' undeclared (first use in this function)
+   68 |         (abs_rpm * (float)MOTOR_STEPS_PER_REV));
+      |                           ^~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:70:18: error: 'MIN_PWM_PERIOD' undeclared (first use in this function)
+   70 |     if (period < MIN_PWM_PERIOD) {
+      |                  ^~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:73:18: error: 'MAX_PWM_PERIOD' undeclared (first use in this function)
+   73 |     if (period > MAX_PWM_PERIOD) {
+      |                  ^~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c: At top level:
+../Motor_stp/Motor_stp.c:81:32: error: unknown type name 'GPTIMER_Regs'
+   81 | static void Motor_UsePWMOutput(GPTIMER_Regs *timer)
+      |                                ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:93:31: error: unknown type name 'GPTIMER_Regs'
+   93 | static void Motor_SetPWMTicks(GPTIMER_Regs *timer,
+      |                               ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:94:5: error: unknown type name 'DL_TIMER_CC_INDEX'
+   94 |     DL_TIMER_CC_INDEX step_cc_index, uint16_t period_ticks)
+      |     ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:120:27: error: unknown type name 'GPTIMER_Regs'
+  120 | static void Motor_StopPWM(GPTIMER_Regs *timer, DL_TIMER_CC_INDEX step_cc_index)
+      |                           ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:120:48: error: unknown type name 'DL_TIMER_CC_INDEX'
+  120 | static void Motor_StopPWM(GPTIMER_Regs *timer, DL_TIMER_CC_INDEX step_cc_index)
+      |                                                ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c: In function 'Motor_EnableStepInterrupt':
+../Motor_stp/Motor_stp.c:130:17: error: 'GIMBAL_STEP1' undeclared (first use in this function)
+  130 |     if (axis == GIMBAL_STEP1) {
+      |                 ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:131:9: warning: implicit declaration of function 'DL_TimerA_clearInterruptStatus' [-Wimplicit-function-declaration]
+  131 |         DL_TimerA_clearInterruptStatus(GIMBAL_STEP_TIMER, DL_TIMERA_INTERRUPT_ZERO_EVENT);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:131:40: error: 'GIMBAL_STEP_TIMER' undeclared (first use in this function)
+  131 |         DL_TimerA_clearInterruptStatus(GIMBAL_STEP_TIMER, DL_TIMERA_INTERRUPT_ZERO_EVENT);
+      |                                        ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:131:59: error: 'DL_TIMERA_INTERRUPT_ZERO_EVENT' undeclared (first use in this function)
+  131 |         DL_TimerA_clearInterruptStatus(GIMBAL_STEP_TIMER, DL_TIMERA_INTERRUPT_ZERO_EVENT);
+      |                                                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:132:9: warning: implicit declaration of function 'DL_TimerA_enableInterrupt' [-Wimplicit-function-declaration]
+  132 |         DL_TimerA_enableInterrupt(GIMBAL_STEP_TIMER, DL_TIMERA_INTERRUPT_ZERO_EVENT);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:133:9: warning: implicit declaration of function 'NVIC_ClearPendingIRQ' [-Wimplicit-function-declaration]
+  133 |         NVIC_ClearPendingIRQ(STEPPER_MOTOR_INST_INT_IRQN);
+      |         ^~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:133:30: error: 'STEPPER_MOTOR_INST_INT_IRQN' undeclared (first use in this function)
+  133 |         NVIC_ClearPendingIRQ(STEPPER_MOTOR_INST_INT_IRQN);
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:134:9: warning: implicit declaration of function 'NVIC_EnableIRQ' [-Wimplicit-function-declaration]
+  134 |         NVIC_EnableIRQ(STEPPER_MOTOR_INST_INT_IRQN);
+      |         ^~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:135:24: error: 'GIMBAL_STEP2' undeclared (first use in this function)
+  135 |     } else if (axis == GIMBAL_STEP2) {
+      |                        ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c: In function 'Motor_DisableStepInterrupt':
+../Motor_stp/Motor_stp.c:153:9: warning: implicit declaration of function 'DL_TimerA_disableInterrupt' [-Wimplicit-function-declaration]
+  153 |         DL_TimerA_disableInterrupt(GIMBAL_STEP_TIMER, DL_TIMERA_INTERRUPT_ZERO_EVENT);
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:153:36: error: 'GIMBAL_STEP_TIMER' undeclared (first use in this function)
+  153 |         DL_TimerA_disableInterrupt(GIMBAL_STEP_TIMER, DL_TIMERA_INTERRUPT_ZERO_EVENT);
+      |                                    ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:153:55: error: 'DL_TIMERA_INTERRUPT_ZERO_EVENT' undeclared (first use in this function)
+  153 |         DL_TimerA_disableInterrupt(GIMBAL_STEP_TIMER, DL_TIMERA_INTERRUPT_ZERO_EVENT);
+      |                                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c: In function 'Motor_StopAxis':
+../Motor_stp/Motor_stp.c:160:17: error: 'GIMBAL_STEP1' undeclared (first use in this function)
+  160 |     if (axis == GIMBAL_STEP1) {
+      |                 ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:163:9: warning: implicit declaration of function 'Motor_StopPWM'; did you mean 'Motor_StopAxis'? [-Wimplicit-function-declaration]
+  163 |         Motor_StopPWM(GIMBAL_STEP_TIMER, GIMBAL_X_STEP_CC_INDEX);
+      |         ^~~~~~~~~~~~~
+      |         Motor_StopAxis
+../Motor_stp/Motor_stp.c:163:23: error: 'GIMBAL_STEP_TIMER' undeclared (first use in this function)
+  163 |         Motor_StopPWM(GIMBAL_STEP_TIMER, GIMBAL_X_STEP_CC_INDEX);
+      |                       ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:163:42: error: 'GIMBAL_X_STEP_CC_INDEX' undeclared (first use in this function)
+  163 |         Motor_StopPWM(GIMBAL_STEP_TIMER, GIMBAL_X_STEP_CC_INDEX);
+      |                                          ^~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:165:24: error: 'GIMBAL_STEP2' undeclared (first use in this function)
+  165 |     } else if (axis == GIMBAL_STEP2) {
+      |                        ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:168:42: error: 'GIMBAL_Y_STEP_CC_INDEX' undeclared (first use in this function)
+  168 |         Motor_StopPWM(GIMBAL_STEP_TIMER, GIMBAL_Y_STEP_CC_INDEX);
+      |                                          ^~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c: In function 'Motor_SetAxisSpeed_RPM':
+../Motor_stp/Motor_stp.c:178:15: error: 'SPEED_LIMIT' undeclared (first use in this function)
+  178 |     if (rpm > SPEED_LIMIT) {
+      |               ^~~~~~~~~~~
+../Motor_stp/Motor_stp.c:193:17: error: 'GIMBAL_STEP1' undeclared (first use in this function)
+  193 |     if (axis == GIMBAL_STEP1) {
+      |                 ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:195:13: warning: implicit declaration of function 'DL_GPIO_setPins' [-Wimplicit-function-declaration]
+  195 |             DL_GPIO_setPins(GIMBAL_DIR_PORT, GIMBAL_DIR_X_PIN);
+      |             ^~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:195:29: error: 'GIMBAL_DIR_PORT' undeclared (first use in this function)
+  195 |             DL_GPIO_setPins(GIMBAL_DIR_PORT, GIMBAL_DIR_X_PIN);
+      |                             ^~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:195:46: error: 'GIMBAL_DIR_X_PIN' undeclared (first use in this function)
+  195 |             DL_GPIO_setPins(GIMBAL_DIR_PORT, GIMBAL_DIR_X_PIN);
+      |                                              ^~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:197:13: warning: implicit declaration of function 'DL_GPIO_clearPins' [-Wimplicit-function-declaration]
+  197 |             DL_GPIO_clearPins(GIMBAL_DIR_PORT, GIMBAL_DIR_X_PIN);
+      |             ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:199:9: warning: implicit declaration of function 'Motor_SetPWMTicks' [-Wimplicit-function-declaration]
+  199 |         Motor_SetPWMTicks(GIMBAL_STEP_TIMER, GIMBAL_X_STEP_CC_INDEX, new_period);
+      |         ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:199:27: error: 'GIMBAL_STEP_TIMER' undeclared (first use in this function)
+  199 |         Motor_SetPWMTicks(GIMBAL_STEP_TIMER, GIMBAL_X_STEP_CC_INDEX, new_period);
+      |                           ^~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:199:46: error: 'GIMBAL_X_STEP_CC_INDEX' undeclared (first use in this function)
+  199 |         Motor_SetPWMTicks(GIMBAL_STEP_TIMER, GIMBAL_X_STEP_CC_INDEX, new_period);
+      |                                              ^~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:202:24: error: 'GIMBAL_STEP2' undeclared (first use in this function)
+  202 |     } else if (axis == GIMBAL_STEP2) {
+      |                        ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:204:46: error: 'GIMBAL_DIR_Y_PIN' undeclared (first use in this function)
+  204 |             DL_GPIO_setPins(GIMBAL_DIR_PORT, GIMBAL_DIR_Y_PIN);
+      |                                              ^~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:208:46: error: 'GIMBAL_Y_STEP_CC_INDEX' undeclared (first use in this function)
+  208 |         Motor_SetPWMTicks(GIMBAL_STEP_TIMER, GIMBAL_Y_STEP_CC_INDEX, new_period);
+      |                                              ^~~~~~~~~~~~~~~~~~~~~~
+../Motor_stp/Motor_stp.c: In function 'Set_Motor_Speed_RPM':
+../Motor_stp/Motor_stp.c:217:28: error: 'GIMBAL_STEP1' undeclared (first use in this function)
+  217 |     Motor_SetAxisSpeed_RPM(GIMBAL_STEP1, rpm_x);
+      |                            ^~~~~~~~~~~~
+../Motor_stp/Motor_stp.c:218:28: error: 'GIMBAL_STEP2' undeclared (first use in this function)
+  218 |     Motor_SetAxisSpeed_RPM(GIMBAL_STEP2, rpm_y);
+      |                            ^~~~~~~~~~~~
+gmake: Target 'all' not remade because of errors.
+ 
+**** Build finished ****
+

@@ -13,8 +13,8 @@ uint8_t  g_uart0_rx_buf[USART_REC_LEN];
 uint16_t g_uart0_rx_sta;
 
 /* ---- UART1 接收缓冲区 (蓝牙PID) ---- */
-uint8_t  g_uart1_rx_buf[USART_REC_LEN];
-uint16_t g_uart1_rx_sta;
+uint8_t  g_uart2_rx_buf[USART_REC_LEN];
+uint16_t g_uart2_rx_sta;
 
 /* ========================================================================
  * uart_printf — 通过 UART1 发送 (蓝牙)
@@ -29,7 +29,7 @@ void uart_printf(const char *fmt, ...)
     if (len < 0) return;
 
     for (const char *p = buf; *p; p++) {
-        DL_UART_Main_transmitDataBlocking(UART_1_INST, *p);
+        DL_UART_Main_transmitDataBlocking(UART_2_INST, *p);
     }
 }
 
@@ -65,24 +65,24 @@ void UART_0_INST_IRQHandler(void)
 /* ========================================================================
  * UART1 ISR — 接收蓝牙PID调参命令
  * ======================================================================== */
-void UART_1_INST_IRQHandler(void)
+void UART_2_INST_IRQHandler(void)
 {
-    switch (DL_UART_Main_getPendingInterrupt(UART_1_INST)) {
+    switch (DL_UART_Main_getPendingInterrupt(UART_2_INST)) {
     case DL_UART_MAIN_IIDX_RX: {
-        uint8_t ch = DL_UART_Main_receiveData(UART_1_INST);
+        uint8_t ch = DL_UART_Main_receiveData(UART_2_INST);
 
-        if ((g_uart1_rx_sta & 0x8000) == 0) {
+        if ((g_uart2_rx_sta & 0x8000) == 0) {
             if (ch == '\r') {
-                g_uart1_rx_sta |= 0x4000;
+                g_uart2_rx_sta |= 0x4000;
             } else if (ch == '\n') {
-                if (g_uart1_rx_sta & 0x4000) {
-                    g_uart1_rx_sta |= 0x8000;
+                if (g_uart2_rx_sta & 0x4000) {
+                    g_uart2_rx_sta |= 0x8000;
                 }
             } else {
-                uint16_t idx = g_uart1_rx_sta & 0x3FFF;
-                g_uart1_rx_buf[idx] = ch;
-                g_uart1_rx_sta = (g_uart1_rx_sta & 0xC000) | ((idx + 1) & 0x3FFF);
-                if (idx >= USART_REC_LEN - 1) g_uart1_rx_sta = 0;
+                uint16_t idx = g_uart2_rx_sta & 0x3FFF;
+                g_uart2_rx_buf[idx] = ch;
+                g_uart2_rx_sta = (g_uart2_rx_sta & 0xC000) | ((idx + 1) & 0x3FFF);
+                if (idx >= USART_REC_LEN - 1) g_uart2_rx_sta = 0;
             }
         }
         break;

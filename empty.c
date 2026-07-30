@@ -155,7 +155,7 @@ int main(void)
 
     /* ---- 1. UART 中断使能 ---- */
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
-    NVIC_EnableIRQ(UART_1_INST_INT_IRQN);
+    NVIC_EnableIRQ(UART_2_INST_INT_IRQN);
 
     /* ---- 2. IMU 最先初始化 ---- */
     //IMU_init();

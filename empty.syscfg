@@ -38,7 +38,6 @@ const TIMER1 = TIMER.addInstance();
 const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1  = UART.addInstance();
 const UART2  = UART.addInstance();
-const UART3  = UART.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -242,15 +241,17 @@ UART1.peripheral.txPin.$assign = "PA10";
 UART1.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric0";
 UART1.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric1";
 
-UART2.$name                    = "UART_1";
-UART2.peripheral.rxPin.$assign = "PA9";
-UART2.peripheral.txPin.$assign = "PA8";
-UART2.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric6";
-UART2.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric7";
-
-UART3.$name             = "UART_2";
-UART3.txPinConfig.$name = "ti_driverlib_gpio_GPIOPinGeneric8";
-UART3.rxPinConfig.$name = "ti_driverlib_gpio_GPIOPinGeneric9";
+UART2.$name                            = "UART_2";
+UART2.peripheral.$assign               = "UART2";
+UART2.txPinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric8";
+UART2.txPinConfig.direction            = scripting.forceWrite("OUTPUT");
+UART2.txPinConfig.hideOutputInversion  = scripting.forceWrite(false);
+UART2.txPinConfig.onlyInternalResistor = scripting.forceWrite(false);
+UART2.txPinConfig.passedPeripheralType = scripting.forceWrite("Digital");
+UART2.rxPinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric9";
+UART2.rxPinConfig.hideOutputInversion  = scripting.forceWrite(false);
+UART2.rxPinConfig.onlyInternalResistor = scripting.forceWrite(false);
+UART2.rxPinConfig.passedPeripheralType = scripting.forceWrite("Digital");
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
@@ -280,7 +281,5 @@ GPIO17.associatedPins[0].pin.$suggestSolution = "PA7";
 I2C2.peripheral.$suggestSolution              = "I2C1";
 SYSCTL.peripheral.$suggestSolution            = "SYSCTL";
 UART1.peripheral.$suggestSolution             = "UART0";
-UART2.peripheral.$suggestSolution             = "UART1";
-UART3.peripheral.$suggestSolution             = "UART2";
-UART3.peripheral.rxPin.$suggestSolution       = "PA22";
-UART3.peripheral.txPin.$suggestSolution       = "PA21";
+UART2.peripheral.rxPin.$suggestSolution       = "PA22";
+UART2.peripheral.txPin.$suggestSolution       = "PA21";

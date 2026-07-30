@@ -119,9 +119,12 @@ static void Display_Update(void)
 
     OLED_Clear();
 
-    /* Y=0:  模式 + Yaw/Pitch/Roll */
-    OLED_Printf(0, 0, OLED_6X8, "%-5s Y:%-5.1f P:%-5.1f R:%-5.1f",
-                mode_str, ypr[0], ypr[1], ypr[2]);
+    /* Y=0:  模式 + 秒表 (100Hz ticks → 秒) */
+    OLED_Printf(0, 0, OLED_6X8, "%-5s %3lu.%02lus %c",
+                mode_str,
+                g_lap_ticks / 100,
+                g_lap_ticks % 100,
+                g_lap_active ? '*' : ' ');
 
     /* Y=8:  循迹err + 左右编码器速度 */
     OLED_Printf(0, 8, OLED_6X8, "Trk:%-5.1f L:%-2ld R:%-2ld",
@@ -152,6 +155,7 @@ int main(void)
 
     /* ---- 1. UART 中断使能 ---- */
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
+    NVIC_EnableIRQ(UART_1_INST_INT_IRQN);
 
     /* ---- 2. IMU 最先初始化 ---- */
     //IMU_init();
@@ -191,7 +195,15 @@ int main(void)
             }
         }
 
-        /* UART PID 调参 */
+        /* UART0 收到外部MCU数据 → 透传到UART1验证 */
+        if (g_uart0_rx_sta & 0x8000) {
+            uint16_t len = g_uart0_rx_sta & 0x3FFF;
+            g_uart0_rx_buf[len] = '\0';
+            uart_printf("[U0] %s\r\n", g_uart0_rx_buf);
+            g_uart0_rx_sta = 0;
+        }
+
+        /* UART1 蓝牙PID调参 */
         if (g_usart_rx_sta & 0x8000) {
             uint16_t len = g_usart_rx_sta & 0x3FFF;
             g_usart_rx_buf[len] = '\0';

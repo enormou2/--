@@ -20,6 +20,10 @@ extern float g_speed_kp, g_speed_ki, g_speed_kd;
 extern float g_track_kp, g_track_ki, g_track_kd;
 extern float g_angle_kp, g_angle_ki, g_angle_kd;
 
+/* 秒表: 100Hz ticks, g_lap_ticks/100 = 秒 */
+extern volatile uint32_t g_lap_ticks;
+extern volatile uint8_t  g_lap_active;
+
 void Control_Init(void);
 void Control_SetMode(steer_mode_t m);
 void Control_SetTargetSpeed(float s);

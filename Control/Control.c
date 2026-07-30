@@ -29,6 +29,10 @@ float g_angle_kp = 10.0f, g_angle_ki = 0.0f,  g_angle_kd = 0.0f;
 static PID_t speed_pid, track_pid, angle_pid;
 extern float ypr[3];
 
+/* ---- 秒表 ---- */
+volatile uint32_t g_lap_ticks  = 0;   /* 100Hz = 每tick 10ms */
+volatile uint8_t  g_lap_active = 0;   /* 0=停止, 1=计时中 */
+
 /* ========================================================================
  * Control_Init
  * ======================================================================== */
@@ -79,6 +83,14 @@ static void Control_SyncPID(void)
 void Control_SetMode(steer_mode_t m)
 {
     g_steer_mode = m;
+
+    if (m == STEER_MODE_TRACK) {
+        g_lap_ticks  = 0;
+        g_lap_active = 1;
+    } else {
+        g_lap_active = 0;
+    }
+
     if (m == STEER_MODE_ANGLE) {
         angle_pid.ErrorInt = 0.0f;
     } else {
@@ -124,15 +136,27 @@ void Control_Update(void)
     Read_Track_DATA(&TrackN);
     err = Track_Err(0);
 
-    /* ---- 停止标记: 弯道出口全宽横线, ≥6路检测到黑线 → 停车 ---- */
-    if (g_steer_mode == STEER_MODE_TRACK) {
+    /* ---- 秒表: TRACK模式下计时 ---- */
+    if (g_lap_active) g_lap_ticks++;
+
+    /* ---- 停止标记: 停车线18mm宽, ≥5路黑线连续≥3帧 ---- */
+    {
+        static uint8_t stop_cnt = 0;
+
         uint8_t black_cnt = 0;
         for (int i = 0; i < 8; i++) {
             if (((TrackN >> i) & 1) == 0) black_cnt++;
         }
-        if (black_cnt >= 6) {
-            Control_SetMode(STEER_MODE_IDLE);
-            return;
+
+        if (g_steer_mode == STEER_MODE_TRACK && black_cnt >= 5) {
+            if (++stop_cnt >= 3) {
+                g_lap_active = 0;  /* 停秒表 */
+                Control_SetMode(STEER_MODE_IDLE);
+                stop_cnt = 0;
+                return;
+            }
+        } else {
+            stop_cnt = 0;
         }
     }
 

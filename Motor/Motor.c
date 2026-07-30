@@ -37,11 +37,13 @@ void Motor_Init(void)
     /* 启动 PWM 定时器 */
     DL_TimerG_startCounter(PWM_MOTOR_INST);
 
-    /* 左编码器 PB22/PB23 — 手动配置 (未在SysConfig中) */
+    /* 左编码器 PB22(A相)+PA7(B相) — 手动配置 (PA6损坏, 未在SysConfig中) */
+    DL_GPIO_initDigitalInput(IOMUX_PINCM50);
     DL_GPIO_initDigitalInputFeatures(IOMUX_PINCM50, DL_GPIO_INVERSION_DISABLE,
                                      DL_GPIO_RESISTOR_PULL_UP, DL_GPIO_HYSTERESIS_DISABLE,
                                      DL_GPIO_WAKEUP_DISABLE);
-    DL_GPIO_initDigitalInputFeatures(IOMUX_PINCM51, DL_GPIO_INVERSION_DISABLE,
+    DL_GPIO_initDigitalInput(IOMUX_PINCM10);
+    DL_GPIO_initDigitalInputFeatures(IOMUX_PINCM10, DL_GPIO_INVERSION_DISABLE,
                                      DL_GPIO_RESISTOR_PULL_UP, DL_GPIO_HYSTERESIS_DISABLE,
                                      DL_GPIO_WAKEUP_DISABLE);
 }
@@ -70,11 +72,11 @@ void Motor_SetLeftSpeed(int16_t speed)
 
     /* 方向 */
     if (forward) {
-        DL_GPIO_clearPins(AIN1_PORT, AIN1_PIN_AIN1_PIN);
-        DL_GPIO_setPins(AIN2_PORT, AIN2_PIN_AIN2_PIN);
-    } else {
         DL_GPIO_setPins(AIN1_PORT, AIN1_PIN_AIN1_PIN);
         DL_GPIO_clearPins(AIN2_PORT, AIN2_PIN_AIN2_PIN);
+    } else {
+        DL_GPIO_clearPins(AIN1_PORT, AIN1_PIN_AIN1_PIN);
+        DL_GPIO_setPins(AIN2_PORT, AIN2_PIN_AIN2_PIN);
     }
 
     /* 占空比 */
@@ -103,11 +105,11 @@ void Motor_SetRightSpeed(int16_t speed)
     }
 
     if (forward) {
-        DL_GPIO_clearPins(BIN1_PORT, BIN1_PIN_BIN1_PIN);
-        DL_GPIO_setPins(BIN2_PORT, BIN2_PIN_BIN2_PIN);
-    } else {
         DL_GPIO_setPins(BIN1_PORT, BIN1_PIN_BIN1_PIN);
         DL_GPIO_clearPins(BIN2_PORT, BIN2_PIN_BIN2_PIN);
+    } else {
+        DL_GPIO_clearPins(BIN1_PORT, BIN1_PIN_BIN1_PIN);
+        DL_GPIO_setPins(BIN2_PORT, BIN2_PIN_BIN2_PIN);
     }
 
     DL_TimerG_setCaptureCompareValue(PWM_MOTOR_INST, duty, DL_TIMER_CC_1_INDEX);
@@ -140,11 +142,10 @@ int32_t Motor_GetLeftEncoder(void)
 
 void Motor_UpdateLeftEncoder(void)
 {
-    /* 原子读取 A/B 两相 (PB22, PB23 同属 GPIOB) */
-    uint32_t pins = DL_GPIO_readPins(GPIOB,
-                       DL_GPIO_PIN_22 | DL_GPIO_PIN_23);
-    uint8_t curr = (uint8_t)(((pins & DL_GPIO_PIN_22) ? 2 : 0) |
-                             ((pins & DL_GPIO_PIN_23) ? 1 : 0));
+    /* A=PB22(GPIOB) B=PA7(GPIOA) — 跨端口分别读 */
+    uint32_t b = DL_GPIO_readPins(GPIOB, DL_GPIO_PIN_22) ? 1 : 0;
+    uint32_t a = DL_GPIO_readPins(GPIOA, DL_GPIO_PIN_7)  ? 1 : 0;
+    uint8_t  curr = (uint8_t)((a << 1) | b);
 
     if (curr != enc_l_last) {
         enc_l_count += enc_table[enc_l_last][curr];

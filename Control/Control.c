@@ -10,8 +10,8 @@
 
 steer_mode_t g_steer_mode=STEER_MODE_IDLE;
 float g_target_speed=0, g_target_yaw=CTRL_TARGET_YAW;
-float g_speed_kp=1,g_speed_ki=0,g_speed_kd=0;
-float g_track_kp=15,g_track_ki=0.1f,g_track_kd=5;
+float g_speed_kp=1.34,g_speed_ki=0,g_speed_kd=3;
+float g_track_kp=9,g_track_ki=0.1f,g_track_kd=4.5;
 float g_angle_kp=10,g_angle_ki=0,g_angle_kd=0;
 
 static PID_t speed_pid, track_pid, angle_pid;
@@ -59,6 +59,13 @@ void Control_Update(void)
     Motor_UpdateSpeed(); Motor_GetSpeed(&spd);
     Read_Track_DATA(&TrackN);
     err=Track_Err(0);
+
+    /* 停止标记: 八路全黑 → 停车 */
+    if (g_steer_mode == STEER_MODE_TRACK && TrackN == 0xFF) {
+        Control_SetMode(STEER_MODE_IDLE);
+        return;
+    }
+
     if(g_steer_mode==STEER_MODE_IDLE)return;
     Sync();
 

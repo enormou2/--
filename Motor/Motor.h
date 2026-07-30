@@ -3,7 +3,7 @@
  * 双电机驱动模块 — TB6612 + 编码器
  *
  * 硬件:
- *   左电机: PWM=PA12(TIMG0_C0), AIN1=PB13, AIN2=PB14, 编码器=PA6/PA7(TIMG8 QEI)
+ *   左电机: PWM=PA12(TIMG0_C0), AIN1=PB13, AIN2=PB14, 编码器=PB22/PA7(软件解码, PA6损坏)
  *   右电机: PWM=PA13(TIMG0_C1), BIN1=PB15, BIN2=PB16, 编码器=PA17/PA24(软件解码)
  *
  * 速度测量:

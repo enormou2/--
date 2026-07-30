@@ -41,6 +41,21 @@ const UART1  = UART.addInstance();
 /**
  * Write custom configuration values to the imported modules.
  */
+const divider6       = system.clockTree["PLL_CLK2X_DIV"];
+divider6.divideValue = 4;
+
+const divider7       = system.clockTree["PLL_PDIV"];
+divider7.divideValue = 2;
+
+const divider9       = system.clockTree["UDIV"];
+divider9.divideValue = 2;
+
+const multiplier2         = system.clockTree["PLL_QDIV"];
+multiplier2.multiplyValue = 10;
+
+const mux8       = system.clockTree["HSCLKMUX"];
+mux8.inputSelect = "HSCLKMUX_SYSPLL2X";
+
 GPIO1.$name                              = "TRACK1";
 GPIO1.associatedPins[0].$name            = "PIN_TRACK1";
 GPIO1.associatedPins[0].direction        = "INPUT";
@@ -178,7 +193,7 @@ I2C2.sclPinConfig.passedPeripheralType = scripting.forceWrite("Digital");
 I2C2.sclPinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric5";
 
 PWM1.$name                              = "PWM_MOTOR";
-PWM1.clockPrescale                      = 125;
+PWM1.clockPrescale                      = 256;
 PWM1.peripheral.$assign                 = "TIMG0";
 PWM1.peripheral.ccp0Pin.$assign         = "PA12";
 PWM1.peripheral.ccp1Pin.$assign         = "PA13";
@@ -197,7 +212,10 @@ PWM1.ccp1PinConfig.onlyInternalResistor = scripting.forceWrite(false);
 PWM1.ccp1PinConfig.passedPeripheralType = scripting.forceWrite("Digital");
 PWM1.ccp1PinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric11";
 
-SYSCTL.forceDefaultClkConfig = true;
+SYSCTL.SYSPLL_Pdiv   = 1;
+SYSCTL.SYSPLL_Qdiv   = 5;
+SYSCTL.SYSPLL_CLK0En = true;
+SYSCTL.MCLKSource    = "HSCLK";
 
 TIMER1.$name              = "TIMER_0";
 TIMER1.timerMode          = "PERIODIC";

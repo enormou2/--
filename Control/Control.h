@@ -9,8 +9,8 @@ typedef enum { STEER_MODE_IDLE=0, STEER_MODE_TRACK=1, STEER_MODE_ANGLE=2 } steer
 
 #define CTRL_PWM_PERIOD    1000
 #define CTRL_LOOP_FREQ_HZ  100
-#define CTRL_BASE_SPEED    300
-#define CTRL_MIN_SPEED     200
+#define CTRL_BASE_SPEED    150
+#define CTRL_MIN_SPEED     100
 #define CTRL_MAX_OFFSET_MM 35.0f
 #define CTRL_TARGET_YAW    0.0f
 

@@ -60,14 +60,14 @@ void delay_ms(uint32_t ms)
 /* ---- TIMER_0 (TIMG6) 中断处理：50Hz 驱动 IMU 姿态融合 ---- */
 void TIMER_0_INST_IRQHandler(void)
 {
-    switch (DL_TimerG_getPendingInterrupt(TIMER_0_INST)) {
+    /*switch (DL_TimerG_getPendingInterrupt(TIMER_0_INST)) {
         case DL_TIMER_IIDX_ZERO:
             g_imu_cnt++;
             IMU_getYawPitchRoll(ypr);
             break;
         default:
             break;
-    }
+    }*/
 }
 
 /* ---- SysTick 中断处理：100Hz 控制循环 ---- */
@@ -137,16 +137,11 @@ static void Display_Update(void)
 
     /* Y=32: Track PID */
     OLED_Printf(0, 32, OLED_6X8, "Tr Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
-                g_track_kp, g_track_ki, g_track_kd);
+                g_track_kp, g_track_ki);
 
     /* Y=40: Angle PID */
-    OLED_Printf(0, 40, OLED_6X8, "An Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
-                g_angle_kp, g_angle_ki, g_angle_kd);
-
-    /* Y=48: 传感器 12345678 (1=黑线) */
-    OLED_Printf(0, 48, OLED_6X8, "T:%d%d%d%d%d%d%d%d",
-                (TrackN>>7)&1, (TrackN>>6)&1, (TrackN>>5)&1, (TrackN>>4)&1,
-                (TrackN>>3)&1, (TrackN>>2)&1, (TrackN>>1)&1, (TrackN>>0)&1);
+    OLED_Printf(0, 40, OLED_6X8, "Kd:%-4.2f",
+                g_track_kd);
 
     OLED_Update();
 }
@@ -159,9 +154,9 @@ int main(void)
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
 
     /* ---- 2. IMU 最先初始化 ---- */
-    IMU_init();
-    delay_ms(100);
-    DL_GPIO_setPins(GPIOB, DL_GPIO_PIN_14);
+    //IMU_init();
+    //delay_ms(100);
+    //DL_GPIO_setPins(GPIOB, DL_GPIO_PIN_14);
     /* ---- 3. 使能 TIMG6 50Hz 中断 ---- */
     NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);
     NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
@@ -207,7 +202,7 @@ int main(void)
         /* OLED 刷新 ~5Hz + 串口输出 */
         {
             static uint32_t tick = 0;
-            if (++tick >= 100000) {
+            if (++tick >= 250000) {
                 tick = 0;
                 Display_Update();
                 

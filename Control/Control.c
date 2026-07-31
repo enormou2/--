@@ -193,7 +193,7 @@ void Control_Update(void)
         PID_Update(&angle_pid);
         diff_pwm = angle_pid.Out;
     }
-
+    
     /* ---- 4. 合成 + 输出 ---- */
     float left  = clampf(avg_pwm + diff_pwm, 0.0f, (float)CTRL_PWM_PERIOD);
     float right = clampf(avg_pwm - diff_pwm, 0.0f, (float)CTRL_PWM_PERIOD);

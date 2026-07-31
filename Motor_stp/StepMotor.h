@@ -35,21 +35,19 @@
  * ⚠️ MSPM0G3507 没有 TIMG1_CCP0, 选用 TIMG7 (PA3→PINCM8)
  * ======================================================================== */
 
-/* STEP — PA3 → TIMG7 CCP0 (PWM 输出) */
-#define STEP_PORT           GPIOA
-#define STEP_PIN            DL_GPIO_PIN_3
-#define STEP_IOMUX          IOMUX_PINCM8
-#define STEP_IOMUX_FUNC     IOMUX_PINCM8_PF_TIMG7_CCP0
+/* STEP — PA3 → TIMG7 CCP0 (SysConfig: PWM_STEP) */
+#define STEP_IOMUX         (GPIO_PWM_STEP_C0_IOMUX)
+#define STEP_IOMUX_FUNC    (GPIO_PWM_STEP_C0_IOMUX_FUNC)
 
-/* DIR — PA2 → GPIO 输出 */
-#define DIR_PORT            GPIOA
-#define DIR_PIN             DL_GPIO_PIN_2
-#define DIR_IOMUX           IOMUX_PINCM5
+/* DIR — PA29 → GPIO 输出 (SysConfig: STEP_DIR) */
+#define DIR_PORT            (STEP_DIR_PORT)
+#define DIR_PIN             (STEP_DIR_PIN_0_PIN)
+#define DIR_IOMUX           (STEP_DIR_PIN_0_IOMUX)
 
-/* EN — PA4 → GPIO 输出 */
-#define EN_PORT             GPIOA
-#define EN_PIN              DL_GPIO_PIN_4
-#define EN_IOMUX            IOMUX_PINCM7
+/* EN — PA31 → GPIO 输出 (SysConfig: STEP_EN2) */
+#define EN_PORT             (STEP_EN2_PORT)
+#define EN_PIN              (STEP_EN2_PIN_2_PIN)
+#define EN_IOMUX            (STEP_EN2_PIN_2_IOMUX)
 
 /* ========================================================================
  * 可调参数 (调试时根据需要修改)
@@ -76,9 +74,9 @@
  * 34mm 电机扭矩偏小 (0.29 N·m), 速度不宜过高
  * 实测时从小往大加, 听到啸叫或丢步就降
  */
-#define STEP_DEFAULT_START_SPEED    500     /* 起始速度 (Hz), 太低可能启动不了 */
-#define STEP_DEFAULT_MAX_SPEED      3000    /* 最高速度 (Hz) */
-#define STEP_DEFAULT_ACCEL          8000    /* 加速度 (Hz/s) */
+#define STEP_DEFAULT_START_SPEED    150     /* 起始速度 (Hz) */
+#define STEP_DEFAULT_MAX_SPEED      800     /* 最高速度 (Hz) */
+#define STEP_DEFAULT_ACCEL          2000    /* 加速度 (Hz/s) */
 
 /* ========================================================================
  * 公开接口

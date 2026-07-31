@@ -28,11 +28,7 @@
  *
  * ============================ 硬件连接 ============================
  *
- * UART1 RX = PA9  (IOMUX_PINCM20, 接收 K230 摄像头数据)
- * UART1 TX = PA8  (IOMUX_PINCM19, 可选同步信号, 暂未使用)
- *
- * ⚠️ MSPM0G3507: PA8=UART1_TX, PA9=UART1_RX (与直觉相反)
- * 引脚在代码中手动配置, 不走 SysConfig
+ * UART0 = PA10/PA11 接收 K230 数据 (SysConfig 配置, 115200)
  */
 
 #ifndef __BALANCE_H
@@ -46,20 +42,19 @@
  * ======================================================================== */
 
 /* 增量式 PID (主力) */
-#define BAL_KP_DEFAULT      20.0f   /* P 增益 (steps/cm) */
-#define BAL_KI_DEFAULT       0.0f   /* I 增益 (初期不加) */
-#define BAL_KD_DEFAULT      40.0f   /* D 增益 (steps/(cm·s)), 阻尼防振荡 */
+#define BAL_KP_DEFAULT       2.0f   /* P 增益 (steps/cm) */
+#define BAL_KI_DEFAULT       0.05f  /* I 增益 — 消除稳态偏差 */
+#define BAL_KD_DEFAULT       0.0f   /* D 增益 (初期不加) */
 
 /* 增量式 PID 输出限幅 (每周期最大增量) */
-#define BAL_DELTA_MAX       100.0f  /* 步/周期 */
-#define BAL_DELTA_MIN      -100.0f
+#define BAL_DELTA_MAX        30.0f  /* 步/周期 */
+#define BAL_DELTA_MIN       -30.0f
 
 /* 到位判断: 连续 N 帧误差 < 阈值 → 判定为 settled */
 #define BAL_SETTLE_THRESHOLD   0.5f   /* cm, 误差小于此值认为到位 */
 #define BAL_SETTLE_COUNT       5      /* 连续帧数 */
 
-/* UART1 接收缓冲区 */
-#define BAL_UART_BUF_LEN   32
+/* UART0 接收缓冲区 (共享 uart_comm.c 的 g_uart0_rx_buf) */
 
 /* ========================================================================
  * 公开接口

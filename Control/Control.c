@@ -19,6 +19,8 @@
 steer_mode_t g_steer_mode   = STEER_MODE_IDLE;
 float        g_target_speed = 0.0f;
 float        g_target_yaw   = CTRL_TARGET_YAW;
+float        g_base_speed   = CTRL_BASE_SPEED;   /* 循迹基础速度, 运行时可变 */
+float        g_min_speed    = CTRL_MIN_SPEED;     /* 循迹最低速度, 运行时可变 */
 
 /* ---- PID 参数 (UART 可调) ---- */
 float g_speed_kp = 1.40f, g_speed_ki = 0.05f,  g_speed_kd = 0.0f;
@@ -27,11 +29,24 @@ float g_angle_kp = 10.0f, g_angle_ki = 0.0f,  g_angle_kd = 0.0f;
 
 /* ---- 内部状态 ---- */
 static PID_t speed_pid, track_pid, angle_pid;
+static uint8_t g_ramp_cnt = 0;    /* 起步斜坡计数 */
 extern float ypr[3];
 
 /* ---- 秒表 ---- */
-volatile uint32_t g_lap_ticks  = 0;   /* 100Hz = 每tick 10ms */
-volatile uint8_t  g_lap_active = 0;   /* 0=停止, 1=计时中 */
+volatile uint32_t g_lap_ticks       = 0;   /* 100Hz = 每tick 10ms */
+volatile uint8_t  g_lap_active      = 0;   /* 0=停止, 1=计时中 */
+uint32_t          g_auto_stop_ticks = 0;   /* >0 时 lap_ticks 达到后自动停车 */
+uint8_t           g_stop_black_min  = 5;   /* 停车线黑线最少路数 */
+uint8_t           g_stop_frames     = 3;   /* 停车线连续帧数 */
+
+/* ---- 模式参数影子存储: 切走保存, 切回恢复 ---- */
+typedef struct {
+    float base_speed, min_speed;
+    float spd_kp, spd_ki, spd_kd;
+    float trk_kp, trk_ki, trk_kd;
+} mode_params_t;
+
+static mode_params_t g_mp[4];  /* index = bal_mode enum */
 
 /* ========================================================================
  * Control_Init
@@ -87,6 +102,7 @@ void Control_SetMode(steer_mode_t m)
     if (m == STEER_MODE_TRACK) {
         g_lap_ticks  = 0;
         g_lap_active = 1;
+        g_ramp_cnt   = 0;    /* 重新开始斜坡 */
     } else {
         g_lap_active = 0;
         Motor_SetLeftSpeed(0);
@@ -134,7 +150,7 @@ void Control_Update(void)
     /* ---- 秒表: TRACK模式下计时 ---- */
     if (g_lap_active) g_lap_ticks++;
 
-    /* ---- 停止标记: 停车线18mm宽, ≥5路黑线连续≥3帧 ---- */
+    /* ---- 停止标记: 参数可配置 (MODE2=8路平行, MODE4=5路) ---- */
     {
         static uint8_t stop_cnt = 0;
 
@@ -143,8 +159,8 @@ void Control_Update(void)
             if (((TrackN >> i) & 1) == 0) black_cnt++;
         }
 
-        if (g_steer_mode == STEER_MODE_TRACK && black_cnt >= 5) {
-            if (++stop_cnt >= 3) {
+        if (g_steer_mode == STEER_MODE_TRACK && black_cnt >= g_stop_black_min) {
+            if (++stop_cnt >= g_stop_frames) {
                 g_lap_active = 0;  /* 停秒表 */
                 Control_SetMode(STEER_MODE_IDLE);
                 stop_cnt = 0;
@@ -153,6 +169,13 @@ void Control_Update(void)
         } else {
             stop_cnt = 0;
         }
+    }
+
+    /* ---- 定时停止: MODE4 8s 自动停车 ---- */
+    if (g_auto_stop_ticks > 0 && g_lap_ticks >= g_auto_stop_ticks) {
+        g_auto_stop_ticks = 0;
+        Control_SetMode(STEER_MODE_IDLE);
+        return;
     }
 
     /* ---- IDLE 模式: 不控制电机 ---- */
@@ -166,9 +189,17 @@ void Control_Update(void)
     if (g_steer_mode == STEER_MODE_TRACK) {
         float ratio = 1.0f - fabsf(err) / CTRL_MAX_OFFSET_MM;
         if (ratio < 0.0f) ratio = 0.0f;
-        target_spd = CTRL_MIN_SPEED + (CTRL_BASE_SPEED - CTRL_MIN_SPEED) * ratio;
+        target_spd = g_min_speed + (g_base_speed - g_min_speed) * ratio;
     } else {
         target_spd = g_target_speed;
+    }
+
+    /* ---- 起步斜坡: 前 CTRL_RAMP_TICKS tick 内线性缓加速 ---- */
+    if (g_ramp_cnt < CTRL_RAMP_TICKS) {
+        g_ramp_cnt++;
+        float ramp = (float)g_ramp_cnt / CTRL_RAMP_TICKS;
+        if (ramp < 0.25f) ramp = 0.25f;  /* 最低25%, 防止原地不动 */
+        target_spd *= ramp;
     }
 
     speed_pid.Target = target_spd;
@@ -198,4 +229,62 @@ void Control_Update(void)
 
     Motor_SetLeftSpeed(left_pwm);
     Motor_SetRightSpeed(right_pwm);
+}
+
+/* ========================================================================
+ * Control_SaveParams — 把活跃参数保存到指定模式的影子存储
+ * ======================================================================== */
+void Control_SaveParams(int mode)
+{
+    if (mode < 0 || mode > 3) return;
+    g_mp[mode].base_speed = g_base_speed;
+    g_mp[mode].min_speed  = g_min_speed;
+    g_mp[mode].spd_kp     = g_speed_kp;
+    g_mp[mode].spd_ki     = g_speed_ki;
+    g_mp[mode].spd_kd     = g_speed_kd;
+    g_mp[mode].trk_kp     = g_track_kp;
+    g_mp[mode].trk_ki     = g_track_ki;
+    g_mp[mode].trk_kd     = g_track_kd;
+}
+
+/* ========================================================================
+ * Control_LoadParams — 从指定模式的影子存储恢复到活跃参数
+ * ======================================================================== */
+void Control_LoadParams(int mode)
+{
+    if (mode < 0 || mode > 3) return;
+    g_base_speed = g_mp[mode].base_speed;
+    g_min_speed  = g_mp[mode].min_speed;
+    g_speed_kp   = g_mp[mode].spd_kp;
+    g_speed_ki   = g_mp[mode].spd_ki;
+    g_speed_kd   = g_mp[mode].spd_kd;
+    g_track_kp   = g_mp[mode].trk_kp;
+    g_track_ki   = g_mp[mode].trk_ki;
+    g_track_kd   = g_mp[mode].trk_kd;
+}
+
+/* ========================================================================
+ * Control_InitParams — 用 #define 默认值初始化影子存储 (main中调用一次)
+ * ======================================================================== */
+void Control_InitParams(void)
+{
+    /* MODE2 */
+    g_mp[1].base_speed = SPD2_BASE;
+    g_mp[1].min_speed  = SPD2_MIN;
+    g_mp[1].spd_kp     = SPD2_KP;
+    g_mp[1].spd_ki     = SPD2_KI;
+    g_mp[1].spd_kd     = SPD2_KD;
+    g_mp[1].trk_kp     = TRK2_KP;
+    g_mp[1].trk_ki     = TRK2_KI;
+    g_mp[1].trk_kd     = TRK2_KD;
+
+    /* MODE4 */
+    g_mp[3].base_speed = SPD4_BASE;
+    g_mp[3].min_speed  = SPD4_MIN;
+    g_mp[3].spd_kp     = SPD4_KP;
+    g_mp[3].spd_ki     = SPD4_KI;
+    g_mp[3].spd_kd     = SPD4_KD;
+    g_mp[3].trk_kp     = TRK4_KP;
+    g_mp[3].trk_ki     = TRK4_KI;
+    g_mp[3].trk_kd     = TRK4_KD;
 }

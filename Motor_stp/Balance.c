@@ -158,8 +158,8 @@ void Balance_SwitchMode(void)
 }
 
 /* ========================================================================
- * Balance_NextMode — PB21 按键: MODE1→MODE2→MODE3→MODE1
- * 调用后在 empty.c 中根据 g_bal_mode 设置对应小车模式
+ * Balance_NextMode — PB21 按键: MODE1→MODE2→MODE3→MODE4→MODE1
+ * 调用后在 empty.c 中根据 g_bal_mode 设置对应小车模式 + PID参数
  * ======================================================================== */
 void Balance_NextMode(void)
 {
@@ -176,12 +176,28 @@ void Balance_NextMode(void)
         g_chal_phase = 0;
         Balance_SetTarget(CHAL_TARGET_INIT);
         break;
-    default: /* BAL_MODE3_CHALLENGE */
+    case BAL_MODE3_CHALLENGE:
+        g_bal_mode   = BAL_MODE4_TIMED;
+        g_chal_state = CHAL_STATE_OFF;
+        Balance_SetTarget(25.0f);
+        break;
+    default: /* BAL_MODE4_TIMED */
         g_bal_mode   = BAL_MODE1_NORMAL;
         g_chal_state = CHAL_STATE_OFF;
         Balance_SetTarget(25.0f);
         break;
     }
+}
+
+/* ========================================================================
+ * Balance_StartChallenge — 重置挑战赛状态 (外部调用)
+ * ======================================================================== */
+void Balance_StartChallenge(void)
+{
+    g_chal_state = CHAL_STATE_RUN;
+    g_chal_tick  = 0;
+    g_chal_phase = 0;
+    Balance_SetTarget(CHAL_TARGET_INIT);
 }
 
 /* ========================================================================

@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define DIRECT_JUMP_MODE  BAL_MODE4_TIMED  /* PA30 直达按键 */
+
 float ypr[3];
 volatile uint32_t g_imu_cnt = 0;
 extern float g_bal_kp, g_bal_ki, g_bal_kd;
@@ -75,10 +77,56 @@ static void Display_Update(void)
         g_bal_mode+1,
         g_bal_mode==BAL_MODE1_NORMAL?"NORM":
         g_bal_mode==BAL_MODE2_TRACK?"TRCK":
+        g_bal_mode==BAL_MODE4_TIMED?"TIM4":
         g_chal_state==CHAL_STATE_RUN?"RUN ":
         g_chal_state==CHAL_STATE_DONE?"OK  ":"----",
         g_chal_tick/100,g_chal_tick%100);
     OLED_Update();
+}
+
+/* ========================================================================
+ * SwitchToMode — 切换到指定模式 (PB21/PA30 共用)
+ * ======================================================================== */
+static void SwitchToMode(int new_mode)
+{
+    Control_SaveParams(g_bal_mode);        /* 保存当前模式参数 */
+    g_bal_mode = (bal_mode_t)new_mode;
+
+    /* ---- 平衡侧: 设置目标 + 挑战赛状态 ---- */
+    if (g_bal_mode == BAL_MODE3_CHALLENGE) {
+        Balance_StartChallenge();
+    } else {
+        g_chal_state = CHAL_STATE_OFF;
+        Balance_SetTarget(25.0f);
+    }
+
+    Control_LoadParams(g_bal_mode);        /* 恢复新模式参数 */
+
+    /* ---- 小车侧: 控制模式 + 停止参数 ---- */
+    switch (g_bal_mode) {
+    case BAL_MODE1_NORMAL:
+        Control_SetMode(STEER_MODE_IDLE);
+        g_auto_stop_ticks = 0;
+        break;
+    case BAL_MODE2_TRACK:
+        g_stop_black_min  = 5;
+        g_stop_frames     = 2;
+        g_auto_stop_ticks = 0;
+        Control_SetMode(STEER_MODE_TRACK);
+        break;
+    case BAL_MODE3_CHALLENGE:
+        g_stop_black_min  = 5;
+        g_stop_frames     = 3;
+        g_auto_stop_ticks = 0;
+        Control_SetMode(STEER_MODE_TRACK);
+        break;
+    case BAL_MODE4_TIMED:
+        g_stop_black_min  = 5;
+        g_stop_frames     = 3;
+        g_auto_stop_ticks = 800;  /* 8s */
+        Control_SetMode(STEER_MODE_TRACK);
+        break;
+    }
 }
 
 int main(void)
@@ -91,6 +139,7 @@ int main(void)
     OLED_Init(); delay_ms(50);
     Motor_Init();
     Control_Init();
+    Control_InitParams();  /* 用 #define 初始化 MODE2/MODE4 影子参数 */
     StepMotor_Init();
     Balance_Init();
     Balance_SetTarget(25.0f);         /* 初始目标: 管道中心 */
@@ -105,13 +154,24 @@ int main(void)
     while(1){
         Motor_UpdateLeftEncoder();
         Motor_UpdateRightEncoder();
-        /* PB21: 模式切换 MODE1→MODE2→MODE3→MODE1 */
+        /* PB21: 模式切换 MODE1→MODE2→MODE3→MODE4→MODE1 */
         if(Button_IsPressed()){
             Balance_NextMode();
-            if(g_bal_mode == BAL_MODE1_NORMAL)
-                Control_SetMode(STEER_MODE_IDLE);
-            else
-                Control_SetMode(STEER_MODE_TRACK);
+            SwitchToMode(g_bal_mode);
+        }
+
+        /* PA30: 直达按键, 一键跳转到 DIRECT_JUMP_MODE */
+        {
+            static uint8_t pa30_last = 1;  /* 上拉=未按下 */
+            uint8_t pa30_now = DL_GPIO_readPins(GPIOA, DL_GPIO_PIN_30) ? 1 : 0;
+            uint8_t pa30_pressed = (pa30_last == 1 && pa30_now == 0);
+            pa30_last = pa30_now;
+            if (pa30_pressed) {
+                if (g_bal_mode == DIRECT_JUMP_MODE)
+                    SwitchToMode(BAL_MODE1_NORMAL);  /* 已在目标模式 → 回 MODE1 */
+                else
+                    SwitchToMode(DIRECT_JUMP_MODE);  /* 跳到目标模式 */
+            }
         }
 
         /* 蓝牙PID调参 */

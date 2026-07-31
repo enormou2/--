@@ -1,6 +1,6 @@
 # FIXED
 
-empty.o: ../empty.c \
+Motor_stp/StepMotor.o: ../Motor_stp/StepMotor.c \
  ti_msp_dl_config.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/devices/msp/msp.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/devices/DeviceFamily.h \
@@ -88,9 +88,7 @@ empty.o: ../empty.c \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/dl_wwdt.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h \
  D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h \
- ../UART/uart_comm.h ../IMU/IMU.h ../OLED/OLED.h ../OLED/OLED_Font.h \
- ../Motor/Motor.h ../Track/Track.h ../Control/Control.h \
- ../Button/Button.h ../Motor_stp/StepMotor.h ../Motor_stp/Balance.h
+ C:/Users/10959/workspace_ccstheia/test/Motor_stp/StepMotor.h
 
 ti_msp_dl_config.h:
 
@@ -266,22 +264,4 @@ D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_interrupt.h:
 
 D:/ti/ccs2051/mspm0_sdk_2_10_00_04/source/ti/driverlib/m0p/dl_systick.h:
 
-../UART/uart_comm.h:
-
-../IMU/IMU.h:
-
-../OLED/OLED.h:
-
-../OLED/OLED_Font.h:
-
-../Motor/Motor.h:
-
-../Track/Track.h:
-
-../Control/Control.h:
-
-../Button/Button.h:
-
-../Motor_stp/StepMotor.h:
-
-../Motor_stp/Balance.h:
+C:/Users/10959/workspace_ccstheia/test/Motor_stp/StepMotor.h:

@@ -9,6 +9,8 @@
 "./IIC/I2C_communication.o"
 "./IMU/IMU.o"
 "./Motor/Motor.o"
+"./Motor_stp/Balance.o"
+"./Motor_stp/StepMotor.o"
 "./OLED/OLED.o"
 "./OLED/OLED_Font.o"
 "./PID/PID.o"

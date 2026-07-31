@@ -21,8 +21,8 @@ float        g_target_speed = 0.0f;
 float        g_target_yaw   = CTRL_TARGET_YAW;
 
 /* ---- PID 参数 (UART 可调) ---- */
-float g_speed_kp = 1.79f, g_speed_ki = 0.13f,  g_speed_kd = 0.0f;
-float g_track_kp = 9.5f,  g_track_ki = 0.05f,  g_track_kd = 2.0f;
+float g_speed_kp = 1.40f, g_speed_ki = 0.05f,  g_speed_kd = 0.0f;
+float g_track_kp = 12.0f,  g_track_ki = 0.15f,  g_track_kd = 2.0f;
 float g_angle_kp = 10.0f, g_angle_ki = 0.0f,  g_angle_kd = 0.0f;
 
 /* ---- 内部状态 ---- */
@@ -41,7 +41,7 @@ void Control_Init(void)
     PID_Init(&speed_pid);
     speed_pid.OutMax      = CTRL_PWM_PERIOD;
     speed_pid.OutMin      = 0;
-    speed_pid.ErrorIntMax =  020.0f;
+    speed_pid.ErrorIntMax =  200.0f;
     speed_pid.ErrorIntMin = -200.0f;
 
     PID_Init(&track_pid);
@@ -140,32 +140,20 @@ void Control_Update(void)
     if (g_lap_active) g_lap_ticks++;
 
     /* ---- 停止标记: 停车线18mm宽, ≥5路黑线连续≥3帧 ---- */
-    /* 检测到停车线后滑行 STOP_COAST_TICKS 个周期再刹停 */
-    #define STOP_COAST_TICKS  15   /* 100Hz, 15 ticks = 150ms */
     {
-        static uint8_t stop_cnt  = 0;
-        static uint8_t coasting  = 0;  /* 0=正常, 1=滑行中 */
-        static uint8_t coast_cnt = 0;
+        static uint8_t stop_cnt = 0;
 
         uint8_t black_cnt = 0;
         for (int i = 0; i < 8; i++) {
             if (((TrackN >> i) & 1) == 0) black_cnt++;
         }
 
-        if (coasting) {
-            /* 滑行阶段: 继续正常控制, 倒计时结束后停车 */
-            if (--coast_cnt == 0) {
-                Control_SetMode(STEER_MODE_IDLE);
-                coasting  = 0;
-                stop_cnt  = 0;
-                return;
-            }
-        } else if (g_steer_mode == STEER_MODE_TRACK && black_cnt >= 5) {
+        if (g_steer_mode == STEER_MODE_TRACK && black_cnt >= 5) {
             if (++stop_cnt >= 3) {
-                g_lap_active = 0;                 /* 停秒表 */
-                coasting     = 1;
-                coast_cnt    = STOP_COAST_TICKS;   /* 进入滑行阶段 */
-                stop_cnt     = 0;
+                g_lap_active = 0;  /* 停秒表 */
+                Control_SetMode(STEER_MODE_IDLE);
+                stop_cnt = 0;
+                return;
             }
         } else {
             stop_cnt = 0;
@@ -179,9 +167,11 @@ void Control_Update(void)
 
     Control_SyncPID();
 
-    /* ---- 2. 速度环: 固定目标速度, 不随循迹误差缩放 ---- */
+    /* ---- 2. 速度环 ---- */
     if (g_steer_mode == STEER_MODE_TRACK) {
-        target_spd = CTRL_BASE_SPEED;
+        float ratio = 1.0f - fabsf(err) / CTRL_MAX_OFFSET_MM;
+        if (ratio < 0.0f) ratio = 0.0f;
+        target_spd = CTRL_MIN_SPEED + (CTRL_BASE_SPEED - CTRL_MIN_SPEED) * ratio;
     } else {
         target_spd = g_target_speed;
     }
@@ -203,16 +193,8 @@ void Control_Update(void)
         PID_Update(&angle_pid);
         diff_pwm = angle_pid.Out;
     }
-
-    /* ---- 4. 合成 + 输出: 限制差速, 防止单轮夹死到0 ---- */
-    #define CTRL_MIN_WHEEL_PWM  30   /* 单轮最低PWM, 防止骤停 */
-    {
-        float max_diff = avg_pwm - CTRL_MIN_WHEEL_PWM;
-        if (max_diff < 0.0f) max_diff = 0.0f;
-        if (diff_pwm >  max_diff) diff_pwm =  max_diff;
-        if (diff_pwm < -max_diff) diff_pwm = -max_diff;
-    }
-
+    
+    /* ---- 4. 合成 + 输出 ---- */
     float left  = clampf(avg_pwm + diff_pwm, 0.0f, (float)CTRL_PWM_PERIOD);
     float right = clampf(avg_pwm - diff_pwm, 0.0f, (float)CTRL_PWM_PERIOD);
 

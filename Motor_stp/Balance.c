@@ -14,12 +14,6 @@ float g_bal_kp = BAL_KP_DEFAULT;
 float g_bal_ki = BAL_KI_DEFAULT;
 float g_bal_kd = BAL_KD_DEFAULT;
 
-/* 双段 PID: 远离中心时的大增益 */
-float g_bal_kp_far = 4.0f;
-float g_bal_ki_far = 0.1f;
-float g_bal_kd_far = 0.0f;
-float g_bal_dual_thr = 25.0f;   /* |error|>此值用远参数 */
-
 /* ---- 模式 ---- */
 volatile bal_mode_t g_bal_mode   = BAL_MODE1_NORMAL;
 volatile uint8_t    g_chal_state = CHAL_STATE_OFF;
@@ -34,7 +28,7 @@ static int32_t g_step_target;
 static uint8_t g_settle_cnt;
 
 /* 挑战赛内部 */
-static uint8_t  g_chal_phase;     /* 0=去14.5, 1=去35.7 */
+static uint8_t  g_chal_phase;     /* 0=去15.0, 1=去35.7 */
 static uint8_t  g_chal_btn_last = 1;
 
 /* ---- 解析纯数字 ---- */
@@ -92,36 +86,25 @@ void Balance_Update(void)
     lost_cnt = 0;
     g_cam_valid = true;
     float error = g_target_pos - g_ball_pos;
-    float ae = (error > 0) ? error : -error;
 
-    /* 到位判断 (只统计, 不中断控制) */
-    if (ae < BAL_SETTLE_THRESHOLD) g_settle_cnt++;
-    else g_settle_cnt = 0;
+    float ae = (error > 0) ? error : -error;
+    if (ae < BAL_SETTLE_THRESHOLD) {
+        g_settle_cnt++;
+        /* 死区内仍保持电机位置, 防止球漂移 */
+        StepMotor_SetTarget(g_step_target);
+        return;
+    }
 
     g_error_prev2 = g_error_prev;
     g_error_prev  = g_error;
     g_error       = error;
 
-    /* 双段 PID: 远离大增益, 近中心高P+高D高频微调 */
-    float kp, ki, kd, dmax;
-    if (ae > g_bal_dual_thr) {
-        kp = g_bal_kp_far; ki = g_bal_ki_far; kd = g_bal_kd_far; dmax = 40.0f;
-    } else {
-        kp = g_bal_kp;     ki = g_bal_ki;     kd = g_bal_kd;     dmax = 15.0f;
-    }
+    float delta = g_bal_kp * (g_error - g_error_prev)
+                + g_bal_ki * g_error
+                + g_bal_kd * (g_error - 2.0f * g_error_prev + g_error_prev2);
 
-    float delta = kp * (g_error - g_error_prev)
-                + ki * g_error
-                + kd * (g_error - 2.0f * g_error_prev + g_error_prev2);
-
-    /* 近中心保证最小响应, 克服静摩擦 */
-    if (ae < 2.0f && delta != 0.0f) {
-        if (delta > 0 && delta < 3.0f) delta = 3.0f;
-        if (delta < 0 && delta > -3.0f) delta = -3.0f;
-    }
-
-    if (delta >  dmax) delta =  dmax;
-    if (delta < -dmax) delta = -dmax;
+    if (delta > BAL_DELTA_MAX)  delta = BAL_DELTA_MAX;
+    if (delta < BAL_DELTA_MIN)  delta = BAL_DELTA_MIN;
 
     g_step_target += (int32_t)delta;
     if (g_step_target > STEP_SOFT_LIMIT_MAX) g_step_target = STEP_SOFT_LIMIT_MAX;
@@ -156,7 +139,7 @@ void Balance_SwitchMode(void)
         g_chal_state = CHAL_STATE_RUN;
         g_chal_tick  = 0;
         g_chal_phase = 0;
-        Balance_SetTarget(14.5f);
+        Balance_SetTarget(15.0f);
     } else {
         /* → MODE1: 正常 */
         g_bal_mode   = BAL_MODE1_NORMAL;
@@ -182,8 +165,8 @@ void Balance_ChallengeUpdate(void)
     float ae;
 
     switch (g_chal_phase) {
-    case 0: /* 去 14.5cm: 进入1cm范围就立刻去35.7 */
-        ae = pos - 14.5f;
+    case 0: /* 去 15.0cm: 进入1cm范围就立刻去35.7 */
+        ae = pos - 15.0f;
         if (ae < 0) ae = -ae;
         if (ae < 1.0f) {
             g_chal_phase = 1;

@@ -21,6 +21,8 @@ ORDERED_OBJS += \
 "./IIC/I2C_communication.o" \
 "./IMU/IMU.o" \
 "./Motor/Motor.o" \
+"./Motor_stp/Balance.o" \
+"./Motor_stp/StepMotor.o" \
 "./OLED/OLED.o" \
 "./OLED/OLED_Font.o" \
 "./PID/PID.o" \
@@ -47,6 +49,7 @@ RMDIR := RMDIR /S/Q
 -include IIC/subdir_vars.mk
 -include IMU/subdir_vars.mk
 -include Motor/subdir_vars.mk
+-include Motor_stp/subdir_vars.mk
 -include OLED/subdir_vars.mk
 -include PID/subdir_vars.mk
 -include Track/subdir_vars.mk
@@ -58,6 +61,7 @@ RMDIR := RMDIR /S/Q
 -include IIC/subdir_rules.mk
 -include IMU/subdir_rules.mk
 -include Motor/subdir_rules.mk
+-include Motor_stp/subdir_rules.mk
 -include OLED/subdir_rules.mk
 -include PID/subdir_rules.mk
 -include Track/subdir_rules.mk
@@ -172,8 +176,8 @@ test.out: $(OBJS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(GEN_MISC_FILES__QUOTED)$(GEN_FILES__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_gcc.o" "Button\Button.o" "Control\Control.o" "ICM45686\icm45686.o" "ICM45686\inv_imu_driver.o" "ICM45686\inv_imu_transport.o" "IIC\I2C_communication.o" "IMU\IMU.o" "Motor\Motor.o" "OLED\OLED.o" "OLED\OLED_Font.o" "PID\PID.o" "Track\Track.o" "UART\uart_comm.o" 
-	-$(RM) "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_gcc.d" "Button\Button.d" "Control\Control.d" "ICM45686\icm45686.d" "ICM45686\inv_imu_driver.d" "ICM45686\inv_imu_transport.d" "IIC\I2C_communication.d" "IMU\IMU.d" "Motor\Motor.d" "OLED\OLED.d" "OLED\OLED_Font.d" "PID\PID.d" "Track\Track.d" "UART\uart_comm.d" 
+	-$(RM) "empty.o" "ti_msp_dl_config.o" "startup_mspm0g350x_gcc.o" "Button\Button.o" "Control\Control.o" "ICM45686\icm45686.o" "ICM45686\inv_imu_driver.o" "ICM45686\inv_imu_transport.o" "IIC\I2C_communication.o" "IMU\IMU.o" "Motor\Motor.o" "Motor_stp\Balance.o" "Motor_stp\StepMotor.o" "OLED\OLED.o" "OLED\OLED_Font.o" "PID\PID.o" "Track\Track.o" "UART\uart_comm.o" 
+	-$(RM) "empty.d" "ti_msp_dl_config.d" "startup_mspm0g350x_gcc.d" "Button\Button.d" "Control\Control.d" "ICM45686\icm45686.d" "ICM45686\inv_imu_driver.d" "ICM45686\inv_imu_transport.d" "IIC\I2C_communication.d" "IMU\IMU.d" "Motor\Motor.d" "Motor_stp\Balance.d" "Motor_stp\StepMotor.d" "OLED\OLED.d" "OLED\OLED_Font.d" "PID\PID.d" "Track\Track.d" "UART\uart_comm.d" 
 	-@echo ' '
 
 .PHONY: all clean dependents

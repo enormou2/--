@@ -102,6 +102,24 @@ bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 #define GPIO_PWM_MOTOR_C1_IOMUX_FUNC                 IOMUX_PINCM35_PF_TIMG0_CCP1
 #define GPIO_PWM_MOTOR_C1_IDX                                DL_TIMER_CC_1_INDEX
 
+/* Defines for PWM_STEP */
+#define PWM_STEP_INST                                                      TIMG7
+#define PWM_STEP_INST_IRQHandler                                TIMG7_IRQHandler
+#define PWM_STEP_INST_INT_IRQN                                  (TIMG7_INT_IRQn)
+#define PWM_STEP_INST_CLK_FREQ                                          10000000
+/* GPIO defines for channel 0 */
+#define GPIO_PWM_STEP_C0_PORT                                              GPIOA
+#define GPIO_PWM_STEP_C0_PIN                                      DL_GPIO_PIN_28
+#define GPIO_PWM_STEP_C0_IOMUX                                    (IOMUX_PINCM3)
+#define GPIO_PWM_STEP_C0_IOMUX_FUNC                   IOMUX_PINCM3_PF_TIMG7_CCP0
+#define GPIO_PWM_STEP_C0_IDX                                 DL_TIMER_CC_0_INDEX
+/* GPIO defines for channel 1 */
+#define GPIO_PWM_STEP_C1_PORT                                              GPIOA
+#define GPIO_PWM_STEP_C1_PIN                                      DL_GPIO_PIN_18
+#define GPIO_PWM_STEP_C1_IOMUX                                   (IOMUX_PINCM40)
+#define GPIO_PWM_STEP_C1_IOMUX_FUNC                  IOMUX_PINCM40_PF_TIMG7_CCP1
+#define GPIO_PWM_STEP_C1_IDX                                 DL_TIMER_CC_1_INDEX
+
 
 
 /* Defines for TIMER_0 */
@@ -155,9 +173,25 @@ bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 #define GPIO_UART_0_IOMUX_TX                                     (IOMUX_PINCM21)
 #define GPIO_UART_0_IOMUX_RX_FUNC                      IOMUX_PINCM22_PF_UART0_RX
 #define GPIO_UART_0_IOMUX_TX_FUNC                      IOMUX_PINCM21_PF_UART0_TX
-#define UART_0_BAUD_RATE                                                  (9600)
-#define UART_0_IBRD_80_MHZ_9600_BAUD                                       (520)
-#define UART_0_FBRD_80_MHZ_9600_BAUD                                        (53)
+#define UART_0_BAUD_RATE                                                (115200)
+#define UART_0_IBRD_80_MHZ_115200_BAUD                                      (43)
+#define UART_0_FBRD_80_MHZ_115200_BAUD                                      (26)
+/* Defines for UART_2 */
+#define UART_2_INST                                                        UART2
+#define UART_2_INST_FREQUENCY                                           80000000
+#define UART_2_INST_IRQHandler                                  UART2_IRQHandler
+#define UART_2_INST_INT_IRQN                                      UART2_INT_IRQn
+#define GPIO_UART_2_RX_PORT                                                GPIOA
+#define GPIO_UART_2_TX_PORT                                                GPIOA
+#define GPIO_UART_2_RX_PIN                                        DL_GPIO_PIN_22
+#define GPIO_UART_2_TX_PIN                                        DL_GPIO_PIN_21
+#define GPIO_UART_2_IOMUX_RX                                     (IOMUX_PINCM47)
+#define GPIO_UART_2_IOMUX_TX                                     (IOMUX_PINCM46)
+#define GPIO_UART_2_IOMUX_RX_FUNC                      IOMUX_PINCM47_PF_UART2_RX
+#define GPIO_UART_2_IOMUX_TX_FUNC                      IOMUX_PINCM46_PF_UART2_TX
+#define UART_2_BAUD_RATE                                                  (9600)
+#define UART_2_IBRD_80_MHZ_9600_BAUD                                       (520)
+#define UART_2_FBRD_80_MHZ_9600_BAUD                                        (53)
 
 
 
@@ -265,6 +299,36 @@ bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 /* Defines for ENC_L_B: GPIOA.7 with pinCMx 14 on package pin 49 */
 #define GPIO_GRP_2_ENC_L_B_PIN                                   (DL_GPIO_PIN_7)
 #define GPIO_GRP_2_ENC_L_B_IOMUX                                 (IOMUX_PINCM14)
+/* Port definition for Pin Group STEP_DIR */
+#define STEP_DIR_PORT                                                    (GPIOA)
+
+/* Defines for PIN_0: GPIOA.29 with pinCMx 4 on package pin 36 */
+#define STEP_DIR_PIN_0_PIN                                      (DL_GPIO_PIN_29)
+#define STEP_DIR_PIN_0_IOMUX                                      (IOMUX_PINCM4)
+/* Port definition for Pin Group STEP_EN */
+#define STEP_EN_PORT                                                     (GPIOA)
+
+/* Defines for PIN_1: GPIOA.4 with pinCMx 9 on package pin 44 */
+#define STEP_EN_PIN_1_PIN                                        (DL_GPIO_PIN_4)
+#define STEP_EN_PIN_1_IOMUX                                       (IOMUX_PINCM9)
+/* Port definition for Pin Group STEP_EN2 */
+#define STEP_EN2_PORT                                                    (GPIOA)
+
+/* Defines for PIN_2: GPIOA.31 with pinCMx 6 on package pin 39 */
+#define STEP_EN2_PIN_2_PIN                                      (DL_GPIO_PIN_31)
+#define STEP_EN2_PIN_2_IOMUX                                      (IOMUX_PINCM6)
+/* Port definition for Pin Group GPIO_GRP_3 */
+#define GPIO_GRP_3_PORT                                                  (GPIOB)
+
+/* Defines for PIN_3: GPIOB.11 with pinCMx 28 on package pin 63 */
+#define GPIO_GRP_3_PIN_3_PIN                                    (DL_GPIO_PIN_11)
+#define GPIO_GRP_3_PIN_3_IOMUX                                   (IOMUX_PINCM28)
+/* Port definition for Pin Group GPIO_GRP_4 */
+#define GPIO_GRP_4_PORT                                                  (GPIOA)
+
+/* Defines for CHALLENGE_BTN: GPIOA.30 with pinCMx 5 on package pin 37 */
+#define GPIO_GRP_4_CHALLENGE_BTN_PIN                            (DL_GPIO_PIN_30)
+#define GPIO_GRP_4_CHALLENGE_BTN_IOMUX                            (IOMUX_PINCM5)
 
 
 /* clang-format on */
@@ -276,10 +340,12 @@ void SYSCFG_DL_SYSCTL_init(void);
 
 bool SYSCFG_DL_SYSCTL_SYSPLL_init(void);
 void SYSCFG_DL_PWM_MOTOR_init(void);
+void SYSCFG_DL_PWM_STEP_init(void);
 void SYSCFG_DL_TIMER_0_init(void);
 void SYSCFG_DL_I2C_0_init(void);
 void SYSCFG_DL_I2C_OLED_init(void);
 void SYSCFG_DL_UART_0_init(void);
+void SYSCFG_DL_UART_2_init(void);
 
 
 bool SYSCFG_DL_saveConfiguration(void);

@@ -125,6 +125,7 @@ ICM45686 \
 IIC \
 IMU \
 Motor \
+Motor_stp \
 OLED \
 PID \
 Track \

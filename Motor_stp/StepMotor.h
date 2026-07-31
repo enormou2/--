@@ -74,9 +74,9 @@
  * 34mm 电机扭矩偏小 (0.29 N·m), 速度不宜过高
  * 实测时从小往大加, 听到啸叫或丢步就降
  */
-#define STEP_DEFAULT_START_SPEED    150     /* 起始速度 (Hz) */
-#define STEP_DEFAULT_MAX_SPEED      800     /* 最高速度 (Hz) */
-#define STEP_DEFAULT_ACCEL          2000    /* 加速度 (Hz/s) */
+#define STEP_DEFAULT_START_SPEED     80     /* 起始速度 (Hz), 低=不抖 */
+#define STEP_DEFAULT_MAX_SPEED      500     /* 最高速度 (Hz) */
+#define STEP_DEFAULT_ACCEL           800    /* 加速度 (Hz/s), 低=平滑 */
 
 /* ========================================================================
  * 公开接口

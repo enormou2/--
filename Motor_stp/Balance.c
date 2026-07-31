@@ -77,6 +77,14 @@ void Balance_Update(void)
     g_cam_valid = true;
     float error = g_target_pos - g_ball_pos;
 
+    /* 死区: 小误差不动作, 减少频繁调整 */
+    float ae = (error > 0) ? error : -error;
+    if (ae < BAL_SETTLE_THRESHOLD) {
+        /* 已在目标范围内, 不更新 */
+        g_settle_cnt++;
+        return;
+    }
+
     /* 增量式 PID */
     g_error_prev2 = g_error_prev;
     g_error_prev  = g_error;
@@ -94,14 +102,8 @@ void Balance_Update(void)
     if (g_step_target < STEP_SOFT_LIMIT_MIN) g_step_target = STEP_SOFT_LIMIT_MIN;
 
     StepMotor_SetTarget(g_step_target);
+    g_settle_cnt = 0;
 
-    /* 到位判断 */
-    float ae = (error > 0) ? error : -error;
-    if (ae < BAL_SETTLE_THRESHOLD) {
-        if (g_settle_cnt < BAL_SETTLE_COUNT) g_settle_cnt++;
-    } else {
-        g_settle_cnt = 0;
-    }
 }
 
 void Balance_SetTarget(float pos_cm) { g_target_pos = pos_cm; g_settle_cnt = 0; }

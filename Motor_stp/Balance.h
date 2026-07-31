@@ -42,17 +42,17 @@
  * ======================================================================== */
 
 /* 增量式 PID (主力) */
-#define BAL_KP_DEFAULT       2.0f   /* P 增益 (steps/cm) */
-#define BAL_KI_DEFAULT       0.05f  /* I 增益 — 消除稳态偏差 */
-#define BAL_KD_DEFAULT       0.0f   /* D 增益 (初期不加) */
+#define BAL_KP_DEFAULT       1.5f   /* P 增益 (steps/cm) */
+#define BAL_KI_DEFAULT       0.03f  /* I 增益 — 消除稳态偏差 */
+#define BAL_KD_DEFAULT       1.0f   /* D 增益 — 阻尼防振荡 */
 
 /* 增量式 PID 输出限幅 (每周期最大增量) */
-#define BAL_DELTA_MAX        30.0f  /* 步/周期 */
-#define BAL_DELTA_MIN       -30.0f
+#define BAL_DELTA_MAX        15.0f  /* 步/周期, 降低防过调 */
+#define BAL_DELTA_MIN       -15.0f
 
-/* 到位判断: 连续 N 帧误差 < 阈值 → 判定为 settled */
-#define BAL_SETTLE_THRESHOLD   0.5f   /* cm, 误差小于此值认为到位 */
-#define BAL_SETTLE_COUNT       5      /* 连续帧数 */
+/* 死区: 误差小于此值不动作 */
+#define BAL_SETTLE_THRESHOLD   0.3f   /* cm */
+#define BAL_SETTLE_COUNT       5
 
 /* UART0 接收缓冲区 (共享 uart_comm.c 的 g_uart0_rx_buf) */
 

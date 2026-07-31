@@ -18,6 +18,7 @@
 float ypr[3];
 volatile uint32_t g_imu_cnt = 0;
 extern float g_bal_kp, g_bal_ki, g_bal_kd;
+extern float g_bal_kp_far, g_bal_ki_far, g_bal_kd_far, g_bal_dual_thr;
 
 void delay_ms(uint32_t ms) { while(ms--) delay_cycles(CPUCLK_FREQ/1000); }
 void TIMER_0_INST_IRQHandler(void) {}
@@ -35,21 +36,37 @@ static void ParseCommand(const char *cmd)
 {
     float val; char pid[8], param[4];
     if(sscanf(cmd,"%7[^.].%3[^:]:%f",pid,param,&val)==3){
-        if(!strcmp(pid,"speed")&&!strcmp(param,"kp")) g_speed_kp=val;
+
+        /* === 小车速度环 === */
+        if     (!strcmp(pid,"speed")&&!strcmp(param,"kp")) g_speed_kp=val;
         else if(!strcmp(pid,"speed")&&!strcmp(param,"ki")) g_speed_ki=val;
         else if(!strcmp(pid,"speed")&&!strcmp(param,"kd")) g_speed_kd=val;
+
+        /* === 循迹转向环 === */
         else if(!strcmp(pid,"track")&&!strcmp(param,"kp")) g_track_kp=val;
         else if(!strcmp(pid,"track")&&!strcmp(param,"ki")) g_track_ki=val;
         else if(!strcmp(pid,"track")&&!strcmp(param,"kd")) g_track_kd=val;
-        else if(!strcmp(pid,"ball")&&!strcmp(param,"kp")) g_bal_kp=val;
-        else if(!strcmp(pid,"ball")&&!strcmp(param,"ki")) g_bal_ki=val;
-        else if(!strcmp(pid,"ball")&&!strcmp(param,"kd")) g_bal_kd=val;
-        else if(!strcmp(pid,"balpos")) Balance_SetTarget(val);
+
+        /* === 角度环 === */
+        else if(!strcmp(pid,"angle")&&!strcmp(param,"kp")) g_angle_kp=val;
+        else if(!strcmp(pid,"angle")&&!strcmp(param,"ki")) g_angle_ki=val;
+        else if(!strcmp(pid,"angle")&&!strcmp(param,"kd")) g_angle_kd=val;
+        else if(!strcmp(pid,"angle")&&!strcmp(param,"num")) Control_SetTargetYaw(val);
+        else if(!strcmp(pid,"angle")&&!strcmp(param,"avs")) Control_SetTargetSpeed(val);
+
+        /* === 平衡环 近中心 === */
         else if(!strcmp(pid,"bal")&&!strcmp(param,"kp")) g_bal_kp=val;
         else if(!strcmp(pid,"bal")&&!strcmp(param,"ki")) g_bal_ki=val;
         else if(!strcmp(pid,"bal")&&!strcmp(param,"kd")) g_bal_kd=val;
-        else if(!strcmp(pid,"angle")&&!strcmp(param,"num")) Control_SetTargetYaw(val);
-        else if(!strcmp(pid,"angle")&&!strcmp(param,"avs")) Control_SetTargetSpeed(val);
+
+        /* === 平衡环 远离 === */
+        else if(!strcmp(pid,"balf")&&!strcmp(param,"kp")) g_bal_kp_far=val;
+        else if(!strcmp(pid,"balf")&&!strcmp(param,"ki")) g_bal_ki_far=val;
+        else if(!strcmp(pid,"balf")&&!strcmp(param,"kd")) g_bal_kd_far=val;
+
+        /* === 平衡环 目标/阈值 === */
+        else if(!strcmp(pid,"balpos")) Balance_SetTarget(val);
+        else if(!strcmp(pid,"balthr")) g_bal_dual_thr=val;
     }
 }
 
@@ -70,7 +87,7 @@ static void Display_Update(void)
         g_speed_kp,g_speed_ki,g_speed_kd);
     OLED_Printf(0,32,OLED_6X8,"Tr Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
         g_track_kp,g_track_ki,g_track_kd);
-    OLED_Printf(0,40,OLED_6X8,"ba Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
+    OLED_Printf(0,40,OLED_6X8,"Ba Kp:%-4.2f Ki:%-4.2f Kd:%-4.2f",
         g_bal_kp,g_bal_ki,g_bal_kd);
     OLED_Printf(0,48,OLED_6X8,"Bal A:%-4.1f S:%-4ld K:%-3.1f",
         Balance_GetPosition(),(long)Balance_GetMotorSteps(),g_bal_kp);

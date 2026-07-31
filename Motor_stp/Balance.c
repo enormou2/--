@@ -1,5 +1,5 @@
 /*
- * Balance.c — 小球平衡控制 + MODE1/MODE2 模式切换
+ * Balance.c — 小球平衡控制 + MODE1/MODE2/MODE3 模式切换
  */
 #include "ti_msp_dl_config.h"
 #include "Motor_stp/StepMotor.h"
@@ -28,7 +28,7 @@ static int32_t g_step_target;
 static uint8_t g_settle_cnt;
 
 /* 挑战赛内部 */
-static uint8_t  g_chal_phase;     /* 0=去15.0, 1=去35.7 */
+static uint8_t  g_chal_phase;     /* 0=19引球→等15, 1=32甩球→等35.7, 2=35.7稳定 */
 static uint8_t  g_chal_btn_last = 1;
 
 /* ---- 解析纯数字 ---- */
@@ -122,7 +122,7 @@ int32_t Balance_GetMotorSteps(void)  { return g_step_target; }
 void Balance_ParseChar(uint8_t ch)   { (void)ch; }
 
 /* ========================================================================
- * Balance_SwitchMode — PA30 按键 MODE1/MODE2 切换
+ * Balance_SwitchMode — PA30 按键 MODE1→MODE2→MODE3→MODE1 循环
  * 主循环中调用
  * ======================================================================== */
 void Balance_SwitchMode(void)
@@ -133,23 +133,60 @@ void Balance_SwitchMode(void)
 
     if (!pressed) return;
 
-    if (g_bal_mode == BAL_MODE1_NORMAL) {
-        /* → MODE2: 挑战赛 */
-        g_bal_mode   = BAL_MODE2_CHALLENGE;
+    switch (g_bal_mode) {
+    case BAL_MODE1_NORMAL:
+        /* → MODE2: 循迹 */
+        g_bal_mode   = BAL_MODE2_TRACK;
+        g_chal_state = CHAL_STATE_OFF;
+        Balance_SetTarget(25.0f);
+        break;
+    case BAL_MODE2_TRACK:
+        /* → MODE3: 挑战赛 19→15→32→35.7 */
+        g_bal_mode   = BAL_MODE3_CHALLENGE;
         g_chal_state = CHAL_STATE_RUN;
         g_chal_tick  = 0;
         g_chal_phase = 0;
-        Balance_SetTarget(15.0f);
-    } else {
+        Balance_SetTarget(CHAL_TARGET_INIT);  /* 19cm: 引球向左 */
+        break;
+    case BAL_MODE3_CHALLENGE:
         /* → MODE1: 正常 */
         g_bal_mode   = BAL_MODE1_NORMAL;
         g_chal_state = CHAL_STATE_OFF;
         Balance_SetTarget(25.0f);
+        break;
     }
 }
 
 /* ========================================================================
- * 挑战赛状态机 (SysTick 中调用)
+ * Balance_NextMode — PB21 按键: MODE1→MODE2→MODE3→MODE1
+ * 调用后在 empty.c 中根据 g_bal_mode 设置对应小车模式
+ * ======================================================================== */
+void Balance_NextMode(void)
+{
+    switch (g_bal_mode) {
+    case BAL_MODE1_NORMAL:
+        g_bal_mode   = BAL_MODE2_TRACK;
+        g_chal_state = CHAL_STATE_OFF;
+        Balance_SetTarget(25.0f);
+        break;
+    case BAL_MODE2_TRACK:
+        g_bal_mode   = BAL_MODE3_CHALLENGE;
+        g_chal_state = CHAL_STATE_RUN;
+        g_chal_tick  = 0;
+        g_chal_phase = 0;
+        Balance_SetTarget(CHAL_TARGET_INIT);
+        break;
+    default: /* BAL_MODE3_CHALLENGE */
+        g_bal_mode   = BAL_MODE1_NORMAL;
+        g_chal_state = CHAL_STATE_OFF;
+        Balance_SetTarget(25.0f);
+        break;
+    }
+}
+
+/* ========================================================================
+ * MODE3 挑战赛状态机 (SysTick 中调用)
+ * 策略: 19→(球到15)→32→(球到35.7)→35.7稳定
  * ======================================================================== */
 void Balance_ChallengeUpdate(void)
 {
@@ -158,22 +195,30 @@ void Balance_ChallengeUpdate(void)
         g_chal_tick++;
     }
 
-    if (g_bal_mode != BAL_MODE2_CHALLENGE || g_chal_state != CHAL_STATE_RUN)
+    if (g_bal_mode != BAL_MODE3_CHALLENGE || g_chal_state != CHAL_STATE_RUN)
         return;
 
     float pos = Balance_GetPosition();
     float ae;
 
     switch (g_chal_phase) {
-    case 0: /* 去 15.0cm: 进入1cm范围就立刻去35.7 */
-        ae = pos - 15.0f;
+    case 0: /* 目标19cm, 等球到达15±1 */
+        ae = pos - CHAL_TRIGGER_15;
         if (ae < 0) ae = -ae;
-        if (ae < 1.0f) {
+        if (ae <= CHAL_TRIGGER_TOL) {
             g_chal_phase = 1;
-            Balance_SetTarget(35.7f);
+            Balance_SetTarget(CHAL_TARGET_MID);  /* 32cm: 甩向右侧 */
         }
         break;
-    case 1: /* 去 35.7cm: 需要停稳 */
+    case 1: /* 目标32cm, 等球到达35.7±1 */
+        ae = pos - CHAL_TRIGGER_357;
+        if (ae < 0) ae = -ae;
+        if (ae <= CHAL_TRIGGER_TOL) {
+            g_chal_phase = 2;
+            Balance_SetTarget(CHAL_TARGET_FINAL);  /* 35.7cm: 锁定稳定 */
+        }
+        break;
+    case 2: /* 目标35.7cm, 等待停稳 */
         if (Balance_IsSettled()) {
             g_chal_state = CHAL_STATE_DONE;
         }

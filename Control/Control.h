@@ -5,7 +5,7 @@
 #define __CONTROL_H
 #include <stdint.h>
 
-typedef enum { STEER_MODE_IDLE=0, STEER_MODE_TRACK=1, STEER_MODE_ANGLE=2 } steer_mode_t;
+typedef enum { STEER_MODE_IDLE=0, STEER_MODE_TRACK=1 } steer_mode_t;
 
 #define CTRL_PWM_PERIOD    1000
 #define CTRL_LOOP_FREQ_HZ  100

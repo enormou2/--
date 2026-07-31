@@ -48,8 +48,6 @@ static void ParseCommand(const char *cmd)
         else if(!strcmp(pid,"bal")&&!strcmp(param,"kp")) g_bal_kp=val;
         else if(!strcmp(pid,"bal")&&!strcmp(param,"ki")) g_bal_ki=val;
         else if(!strcmp(pid,"bal")&&!strcmp(param,"kd")) g_bal_kd=val;
-        else if(!strcmp(pid,"angle")&&!strcmp(param,"num")) Control_SetTargetYaw(val);
-        else if(!strcmp(pid,"angle")&&!strcmp(param,"avs")) Control_SetTargetSpeed(val);
     }
 }
 
@@ -58,8 +56,7 @@ static void Display_Update(void)
     motor_speed_t spd; float trk_err; const char *mode_str;
     Motor_GetSpeed(&spd); trk_err=Track_Err(0);
     if(g_steer_mode==STEER_MODE_IDLE) mode_str="IDLE";
-    else if(g_steer_mode==STEER_MODE_TRACK) mode_str="TRACK";
-    else mode_str="ANGLE";
+    else mode_str="TRACK";
     OLED_Clear();
     OLED_Printf(0,0,OLED_6X8,"%-5s %3lu.%02lus %c",
         mode_str,g_lap_ticks/100,g_lap_ticks%100,g_lap_active?'*':' ');
@@ -77,7 +74,9 @@ static void Display_Update(void)
     OLED_Printf(0,56,OLED_6X8,"M%d %s %3lu.%02lus",
         g_bal_mode+1,
         g_bal_mode==BAL_MODE1_NORMAL?"NORM":
-        g_chal_state==CHAL_STATE_RUN?"RUN ":"OK  ",
+        g_bal_mode==BAL_MODE2_TRACK?"TRCK":
+        g_chal_state==CHAL_STATE_RUN?"RUN ":
+        g_chal_state==CHAL_STATE_DONE?"OK  ":"----",
         g_chal_tick/100,g_chal_tick%100);
     OLED_Update();
 }
@@ -106,15 +105,14 @@ int main(void)
     while(1){
         Motor_UpdateLeftEncoder();
         Motor_UpdateRightEncoder();
+        /* PB21: 模式切换 MODE1→MODE2→MODE3→MODE1 */
         if(Button_IsPressed()){
-            switch(g_steer_mode){
-            case STEER_MODE_IDLE: Control_SetMode(STEER_MODE_TRACK); break;
-            case STEER_MODE_TRACK:Control_SetMode(STEER_MODE_ANGLE);break;
-            case STEER_MODE_ANGLE:Control_SetMode(STEER_MODE_IDLE);break;
-            }
+            Balance_NextMode();
+            if(g_bal_mode == BAL_MODE1_NORMAL)
+                Control_SetMode(STEER_MODE_IDLE);
+            else
+                Control_SetMode(STEER_MODE_TRACK);
         }
-        /* PA30 模式切换 */
-        Balance_SwitchMode();
 
         /* 蓝牙PID调参 */
         if(g_usart_rx_sta&0x8000){uint16_t l=g_usart_rx_sta&0x3FFF;g_usart_rx_buf[l]=0;

@@ -89,11 +89,6 @@ void Control_SetMode(steer_mode_t m)
         g_lap_active = 1;
     } else {
         g_lap_active = 0;
-    }
-
-    if (m == STEER_MODE_ANGLE) {
-        angle_pid.ErrorInt = 0.0f;
-    } else {
         Motor_SetLeftSpeed(0);
         Motor_SetRightSpeed(0);
     }

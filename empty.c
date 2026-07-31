@@ -27,13 +27,13 @@ void SysTick_Handler(void)
     Button_Poll();
     Control_Update();
     StepMotor_Update();
-    Balance_Update();       /* 小球平衡控制 */
+    Balance_Update();
+    Balance_ChallengeUpdate();
 }
 
 static void ParseCommand(const char *cmd)
 {
     float val; char pid[8], param[4];
-    uart_printf("RX:%s\r\n",cmd); // DEBUG
     if(sscanf(cmd,"%7[^.].%3[^:]:%f",pid,param,&val)==3){
         if(!strcmp(pid,"speed")&&!strcmp(param,"kp")) g_speed_kp=val;
         else if(!strcmp(pid,"speed")&&!strcmp(param,"ki")) g_speed_ki=val;
@@ -74,6 +74,11 @@ static void Display_Update(void)
         g_bal_kp,g_bal_ki,g_bal_kd);
     OLED_Printf(0,48,OLED_6X8,"Bal A:%-4.1f S:%-4ld K:%-3.1f",
         Balance_GetPosition(),(long)Balance_GetMotorSteps(),g_bal_kp);
+    OLED_Printf(0,56,OLED_6X8,"M%d %s %3lu.%02lus",
+        g_bal_mode+1,
+        g_bal_mode==BAL_MODE1_NORMAL?"NORM":
+        g_chal_state==CHAL_STATE_RUN?"RUN ":"OK  ",
+        g_chal_tick/100,g_chal_tick%100);
     OLED_Update();
 }
 
@@ -108,6 +113,9 @@ int main(void)
             case STEER_MODE_ANGLE:Control_SetMode(STEER_MODE_IDLE);break;
             }
         }
+        /* PA30 模式切换 */
+        Balance_SwitchMode();
+
         /* 蓝牙PID调参 */
         if(g_usart_rx_sta&0x8000){uint16_t l=g_usart_rx_sta&0x3FFF;g_usart_rx_buf[l]=0;
             ParseCommand((const char*)g_usart_rx_buf);g_usart_rx_sta=0;}

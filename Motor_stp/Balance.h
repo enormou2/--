@@ -1,34 +1,8 @@
 /*
  * Balance.h — 小球平衡控制模块
  *
- * ============================ 控制策略 ============================
- *
- * 【主力方案】增量式 PID:
- *   每周期(有新摄像头数据时):
- *     error = target - actual  (cm)
- *     delta = Kp*(error-last_error) + Ki*error + Kd*(error-2*last_error+last_last_error)
- *     current_target_steps += (int32_t)delta
- *     StepMotor_SetTarget(current_target_steps)
- *
- *   优点: 输出平滑, 不会因误差缩小而回退, 天然匹配步进电机增量执行器
- *
- * 【备用方案】位置式 PID + 死区 (代码中注释保留, 实测后可 A/B 对比):
- *   每周期:
- *     PID_Update() → output (步数绝对值)
- *     if |output - last_output| > deadband → StepMotor_SetTarget(output)
- *
- * ============================ 反馈链路 ============================
- *
- * K230 摄像头 (22-24fps)
- *   → UART1 发送: "x:+3.2\r\n" 或 "x:-1.5\r\n" (球位置, cm)
- *   → MSPM0 UART1 RX (PA9) 中断接收, 检测 \n 换行
- *   → Balance_Update() (SysTick 100Hz) 中检测新数据标志
- *   → 仅在新帧到达时计算 PID
- *   → 摄像头帧率 ~23fps → 实际控制频率 ~23Hz
- *
- * ============================ 硬件连接 ============================
- *
- * UART0 = PA10/PA11 接收 K230 数据 (SysConfig 配置, 115200)
+ * 增量式 PID + 步进电机 + K230 摄像头
+ * MODE1 正常模式(中心25) | MODE2 挑战赛(15.8→35.7, 5s)
  */
 
 #ifndef __BALANCE_H
@@ -37,79 +11,49 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* ========================================================================
- * 默认 PID 参数 —【待实测】从小往大调
- * ======================================================================== */
+/* ---- 默认 PID 参数 ---- */
+#define BAL_KP_DEFAULT       1.0f
+#define BAL_KI_DEFAULT       0.44f
+#define BAL_KD_DEFAULT       14.0f
 
-/* 增量式 PID (主力) */
-#define BAL_KP_DEFAULT       1.5f   /* P 增益 (steps/cm) */
-#define BAL_KI_DEFAULT       0.03f  /* I 增益 — 消除稳态偏差 */
-#define BAL_KD_DEFAULT       1.0f   /* D 增益 — 阻尼防振荡 */
-
-/* 增量式 PID 输出限幅 (每周期最大增量) */
-#define BAL_DELTA_MAX        15.0f  /* 步/周期, 降低防过调 */
+#define BAL_DELTA_MAX        15.0f
 #define BAL_DELTA_MIN       -15.0f
 
-/* 死区: 误差小于此值不动作 */
-#define BAL_SETTLE_THRESHOLD   0.3f   /* cm */
-#define BAL_SETTLE_COUNT       5
+#define BAL_SETTLE_THRESHOLD   0.3f
+#define BAL_SETTLE_COUNT       3
 
-/* UART0 接收缓冲区 (共享 uart_comm.c 的 g_uart0_rx_buf) */
+/* ---- 模式 ---- */
+typedef enum {
+    BAL_MODE1_NORMAL  = 0,  /* 正常模式, 中心 25cm */
+    BAL_MODE2_CHALLENGE = 1, /* 挑战赛: 25→15.8→35.7, 5秒内 */
+} bal_mode_t;
 
-/* ========================================================================
- * 公开接口
- * ======================================================================== */
+/* ---- 挑战赛状态 ---- */
+#define CHAL_STATE_OFF    0
+#define CHAL_STATE_RUN    1
+#define CHAL_STATE_DONE   2
 
-/**
- * @brief 初始化平衡模块
- *   - UART1: 115200-8-N-1, RX 中断 (NVIC pri=0)
- *   - PID 参数初始化为默认值
- *   - 目标位置初始化为 0.0cm (中心)
- *
- * @note 在 StepMotor_Init() 之后调用 (因为 Balance 需要调用 StepMotor API)
- */
+/* ---- 公开接口 ---- */
 void Balance_Init(void);
-
-/**
- * @brief 平衡控制更新 (必须在 SysTick 100Hz 中每周期调用)
- *
- * 内部仅在有新摄像头数据时执行 PID 计算
- * 无新数据时立即返回 (不浪费 CPU)
- */
 void Balance_Update(void);
-
-/**
- * @brief 设置目标球位置
- * @param pos_cm  目标位置 (cm), 0=中心, 正=右侧, 负=左侧
- */
 void Balance_SetTarget(float pos_cm);
-
-/**
- * @brief 查询球是否稳定在目标位置
- * @return true=连续多帧误差在阈值内
- */
 bool Balance_IsSettled(void);
-
-/**
- * @brief 获取球当前实际位置 (最近一帧摄像头数据)
- * @return 球位置 (cm)
- */
 float Balance_GetPosition(void);
-
-/**
- * @brief 获取步进电机目标步数 (用于 OLED 显示/调试)
- */
 int32_t Balance_GetMotorSteps(void);
-
-/**
- * @brief 解析 UART1 接收的单字节 (在 UART1 ISR 中调用)
- * @param ch 接收到的字节
- */
 void Balance_ParseChar(uint8_t ch);
 
-/* ---- PID 参数 (运行时可通过 UART 调整) ---- */
+/* ---- 模式控制 ---- */
+extern volatile bal_mode_t g_bal_mode;
+void Balance_SwitchMode(void);         /* PA30 切换 MODE1/MODE2 */
+void Balance_ChallengeUpdate(void);    /* 挑战赛状态机, SysTick调用 */
+
+/* ---- 挑战赛计时 ---- */
+extern volatile uint8_t  g_chal_state;
+extern volatile uint32_t g_chal_tick;   /* 10ms/tick */
+
+/* ---- PID 参数 (UART 调参) ---- */
 extern float g_bal_kp;
 extern float g_bal_ki;
 extern float g_bal_kd;
 
-#endif /* __BALANCE_H */
+#endif
